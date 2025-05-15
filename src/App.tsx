@@ -1,7 +1,8 @@
+// src/App.tsx
+import AppRouter from "./routes/AppRouter"
+
 function App() {
-  return (
-    <div className="text-2xl font-bold text-blue-500">Hello Whiteboard!</div>
-  )
+  return <AppRouter />
 }
 
 export default App
