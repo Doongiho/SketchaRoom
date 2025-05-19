@@ -7,6 +7,8 @@ import { FirebaseError } from "firebase/app"
 import { useNavigate } from "react-router-dom"
 import InputField from "../../components/InputField"
 import { FiEye, FiEyeOff } from "react-icons/fi"
+import { googleProvider } from "../../libs/firebase"
+import { signInWithPopup } from "firebase/auth"
 
 const SignUpPage = () => {
   const [form, setForm] = useState({
@@ -59,6 +61,30 @@ const SignUpPage = () => {
         setError(err.message)
       } else {
         setError("회원가입에 실패했습니다.")
+      }
+    }
+  }
+
+  const handleGoogleSignUp = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider)
+      const user = result.user
+
+      // Firestore에 사용자 정보 저장
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL || "",
+        createdAt: serverTimestamp(),
+      })
+
+      navigate("/login")
+    } catch (err) {
+      if (err instanceof FirebaseError) {
+        setError(err.message)
+      } else {
+        setError("구글 회원가입에 실패했습니다.")
       }
     }
   }
@@ -119,7 +145,9 @@ const SignUpPage = () => {
 
         {error && <Error>{error}</Error>}
         <Button type="submit">회원가입</Button>
-        <Button>구글 회원가입</Button>
+        <Button type="button" onClick={handleGoogleSignUp}>
+          구글 회원가입
+        </Button>
       </Form>
     </Wrapper>
   )
