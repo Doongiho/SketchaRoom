@@ -13,6 +13,7 @@ interface Room {
 const HomePage = () => {
   const user = useAuth()
   const [myRooms, setMyRooms] = useState<Room[]>([])
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -36,6 +37,10 @@ const HomePage = () => {
     fetchRooms()
   }, [user])
 
+  const toggleMenu = () => {
+    setIsMenuOpen((prev) => !prev)
+  }
+
   return (
     <Container>
       <Header>
@@ -43,11 +48,23 @@ const HomePage = () => {
           {user ? `${user.displayName}님 안녕하세요` : "로그인 해주세요"}
         </Greeting>
         <UserIDText>{user?.uid && `UID: ${user.uid}`}</UserIDText>
-        <MenuButton>
-          <Bar />
-          <Bar />
-          <Bar />
-        </MenuButton>
+        <MenuDiv onClick={toggleMenu}>
+          <MenuButton>
+            <Bar />
+            <Bar />
+            <Bar />
+          </MenuButton>
+          {isMenuOpen && (
+            <MenuModal>
+              <MenuContnet>
+                <Profile>프로필</Profile>
+                <Whiteboard>화이트보드 만들기</Whiteboard>
+                <Enter>입장하기</Enter>
+                <Logout>로그아웃</Logout>
+              </MenuContnet>
+            </MenuModal>
+          )}
+        </MenuDiv>
       </Header>
 
       <Divider />
@@ -97,10 +114,9 @@ const Container = styled.div`
 
 const Header = styled.header`
   display: flex;
-  flex-direction: column;
   gap: 0.5rem;
-  align-items: flex-start;
   margin-bottom: 1.5rem;
+  align-items: center;
 
   @media (min-width: 640px) {
     flex-direction: row;
@@ -126,6 +142,44 @@ const MenuButton = styled.div`
   flex-direction: column;
   gap: 6px;
 `
+
+const MenuDiv = styled.div`
+  position: relative;
+`
+
+const MenuModal = styled.div`
+  position: absolute;
+  top: 36px;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  width: 180px;
+  z-index: 1000;
+`
+
+const MenuContnet = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0;
+`
+
+const MenuItem = styled.li`
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: #f4f4f4;
+  }
+`
+
+const Profile = styled(MenuItem)``
+const Whiteboard = styled(MenuItem)``
+const Enter = styled(MenuItem)``
+const Logout = styled(MenuItem)``
 
 const Bar = styled.div`
   width: 24px;
