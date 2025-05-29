@@ -6,7 +6,7 @@ import {
   signOut,
   updateProfile,
 } from "firebase/auth"
-import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore"
 import { auth, db, googleProvider } from "../../libs/firebase"
 
 export const loginWithEmail = async (
@@ -55,6 +55,18 @@ export const loginWithGoogle = async (): Promise<UserCredential> => {
   )
 
   return result
+}
+
+export const getCurrentUserProfile = async () => {
+  const currentUser = auth.currentUser
+  if (!currentUser) throw new Error("로그인된 사용자가 없습니다.")
+
+  const userRef = doc(db, "users", currentUser.uid)
+  const snapshot = await getDoc(userRef)
+
+  if (!snapshot.exists()) throw new Error("사용자 정보가 존재하지 않습니다.")
+
+  return snapshot.data()
 }
 
 export const logout = async () => {
