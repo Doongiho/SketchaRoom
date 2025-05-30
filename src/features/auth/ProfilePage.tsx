@@ -6,6 +6,7 @@ import {
 } from "firebase/auth"
 import { doc, getDoc, updateDoc } from "firebase/firestore"
 import { useEffect, useState } from "react"
+import { HiArrowLeft } from "react-icons/hi"
 import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
 import InputField from "../../components/InputField"
@@ -156,6 +157,9 @@ const ProfilePage = () => {
 
   return (
     <Wrapper>
+      <BackButton onClick={() => navigate(-1)}>
+        <HiArrowLeft size={28} />
+      </BackButton>
       <Title>프로필</Title>
 
       {isEditing ? (
@@ -221,6 +225,7 @@ const ProfilePage = () => {
 export default ProfilePage
 
 const Wrapper = styled.div`
+  position: relative;
   max-width: 480px;
   margin: 60px auto;
   padding: 2rem;
@@ -272,5 +277,19 @@ const Button = styled.button`
   &:hover {
     background-color: #594100;
     color: #ffffff;
+  }
+`
+const BackButton = styled.button`
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #000;
+  padding: 0;
+
+  &:hover {
+    color: #594100;
   }
 `
