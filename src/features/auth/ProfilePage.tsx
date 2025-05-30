@@ -6,6 +6,7 @@ import {
 } from "firebase/auth"
 import { doc, getDoc, updateDoc } from "firebase/firestore"
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
 import InputField from "../../components/InputField"
 import { auth, db } from "../../libs/firebase"
@@ -28,6 +29,7 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [isEditing, setIsEditing] = useState(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -107,6 +109,7 @@ const ProfilePage = () => {
       setUser({ ...form, password: "", currentPassword: "" })
       setIsEditing(false)
       alert("프로필이 업데이트되었습니다.")
+      navigate("/")
     } catch (err) {
       if (err instanceof FirebaseError) {
         console.error("Firebase 오류 발생", err.code, err.message)
@@ -153,7 +156,7 @@ const ProfilePage = () => {
 
   return (
     <Wrapper>
-      <Title>내 프로필</Title>
+      <Title>프로필</Title>
 
       {isEditing ? (
         <>
