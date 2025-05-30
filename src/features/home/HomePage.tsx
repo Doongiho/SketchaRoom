@@ -45,7 +45,9 @@ const HomePage = () => {
   const handleGoToProfile = () => {
     navigate("/profile")
   }
-
+  const handleGoToCreateRoom = () => {
+    navigate("/createRoom")
+  }
   return (
     <Container>
       <Header>
@@ -63,7 +65,9 @@ const HomePage = () => {
             <MenuModal>
               <MenuContnet>
                 <Profile onClick={handleGoToProfile}>프로필</Profile>
-                <Whiteboard>화이트보드 만들기</Whiteboard>
+                <Whiteboard onClick={handleGoToCreateRoom}>
+                  화이트보드 만들기
+                </Whiteboard>
                 <Enter>입장하기</Enter>
                 <Logout>로그아웃</Logout>
               </MenuContnet>

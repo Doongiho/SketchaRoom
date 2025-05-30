@@ -1,3 +1,5 @@
-export default function CreateRoomPage() {
-  return <div className="p-4 text-xl">CreateRoom Page</div>
+const CreateRoomPage = () => {
+  return <div></div>
 }
+
+export default CreateRoomPage
