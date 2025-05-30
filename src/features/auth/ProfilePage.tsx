@@ -11,6 +11,7 @@ import styled from "styled-components"
 import BackButton from "../../components/ackButton"
 import InputField from "../../components/InputField"
 import { auth, db } from "../../libs/firebase"
+import { deleteAccount } from "./AuthService"
 
 interface UserProfile {
   displayName: string
@@ -142,6 +143,20 @@ const ProfilePage = () => {
     }
   }
 
+  const handleClickDelete = async () => {
+    const confirm = window.confirm("정말로 탈퇴하시겠습니까?")
+    if (!confirm) return
+
+    try {
+      await deleteAccount()
+      alert("정상적으로 탈퇴되었습니다.")
+      window.location.href = "/login"
+    } catch (err) {
+      console.error(err)
+      alert("탈퇴 중 오류가 발생했습니다.")
+    }
+  }
+
   if (loading)
     return (
       <Wrapper>
@@ -216,6 +231,7 @@ const ProfilePage = () => {
           <Button onClick={() => setIsEditing(true)}>수정하기</Button>
         )}
       </ButtonArea>
+      <Button onClick={handleClickDelete}>탈퇴하기</Button>
     </Wrapper>
   )
 }

@@ -1,6 +1,7 @@
 import type { UserCredential } from "firebase/auth"
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   EmailAuthProvider,
   reauthenticateWithCredential,
   signInWithEmailAndPassword,
@@ -9,7 +10,13 @@ import {
   updatePassword,
   updateProfile,
 } from "firebase/auth"
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore"
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore"
 import { auth, db, googleProvider } from "../../libs/firebase"
 
 export const loginWithEmail = async (
@@ -86,4 +93,13 @@ export const handlePasswordUpdate = async (
 
 export const logout = async () => {
   await signOut(auth)
+}
+
+export const deleteAccount = async (): Promise<void> => {
+  const user = auth.currentUser
+  if (!user) throw new Error("로그인된 사용자가 없습니다.")
+
+  await deleteDoc(doc(db, "users", user.uid))
+
+  await deleteUser(user)
 }
