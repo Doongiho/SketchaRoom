@@ -1,14 +1,16 @@
-import { useState } from "react"
-import styled from "styled-components"
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth"
-import { auth, db } from "../../libs/firebase"
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { FirebaseError } from "firebase/app"
-import { useNavigate } from "react-router-dom"
-import InputField from "../../components/InputField"
+import {
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  updateProfile,
+} from "firebase/auth"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { useState } from "react"
 import { FiEye, FiEyeOff } from "react-icons/fi"
-import { googleProvider } from "../../libs/firebase"
-import { signInWithPopup } from "firebase/auth"
+import { useNavigate } from "react-router-dom"
+import styled from "styled-components"
+import InputField from "../../components/InputField"
+import { auth, db, googleProvider } from "../../libs/firebase"
 
 const SignUpPage = () => {
   const [form, setForm] = useState({
@@ -70,7 +72,6 @@ const SignUpPage = () => {
       const result = await signInWithPopup(auth, googleProvider)
       const user = result.user
 
-      // Firestore에 사용자 정보 저장
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         email: user.email,
