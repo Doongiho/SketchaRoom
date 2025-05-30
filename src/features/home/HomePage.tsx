@@ -1,9 +1,10 @@
+import { signOut } from "firebase/auth"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
 import useAuth from "../../hooks/useAuth"
-import { db } from "../../libs/firebase"
+import { auth, db } from "../../libs/firebase"
 interface Room {
   id: string
   title: string
@@ -45,9 +46,22 @@ const HomePage = () => {
   const handleGoToProfile = () => {
     navigate("/profile")
   }
+
   const handleGoToCreateRoom = () => {
     navigate("/createRoom")
   }
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      alert("로그아웃 되었습니다.")
+      navigate("/login") // 로그아웃 후 이동할 경로
+    } catch (error) {
+      console.error("로그아웃 실패:", error)
+      alert("로그아웃 중 오류가 발생했습니다.")
+    }
+  }
+
   return (
     <Container>
       <Header>
@@ -69,7 +83,7 @@ const HomePage = () => {
                   화이트보드 만들기
                 </Whiteboard>
                 <Enter>입장하기</Enter>
-                <Logout>로그아웃</Logout>
+                <Logout onClick={handleLogout}>로그아웃</Logout>
               </MenuContnet>
             </MenuModal>
           )}

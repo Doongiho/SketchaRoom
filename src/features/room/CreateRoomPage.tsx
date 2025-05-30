@@ -4,6 +4,7 @@ import QRCode from "react-qr-code"
 import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
 import { v4 as uuidv4 } from "uuid"
+import BackButton from "../../components/ackButton"
 import { auth, db } from "../../libs/firebase"
 
 const CreateRoomPage = () => {
@@ -40,6 +41,7 @@ const CreateRoomPage = () => {
 
   return (
     <Wrapper>
+      <BackButton />
       <Title>방 만들기</Title>
 
       <Input
