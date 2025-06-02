@@ -10,8 +10,10 @@ import {
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
+import Modal from "../../components/Modal"
 import useAuth from "../../hooks/useAuth"
 import { auth, db } from "../../libs/firebase"
+
 interface Room {
   id: string
   name: string
@@ -25,6 +27,8 @@ const HomePage = () => {
   const navigate = useNavigate()
   const [myRooms, setMyRooms] = useState<Room[]>([])
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -83,6 +87,16 @@ const HomePage = () => {
     }
   }
 
+  const handleInviteClick = (room: Room) => {
+    setSelectedRoom(room)
+    setIsInviteModalOpen(true)
+  }
+
+  const closeInviteModal = () => {
+    setIsInviteModalOpen(false)
+    setSelectedRoom(null)
+  }
+
   return (
     <Container>
       <Header>
@@ -120,16 +134,56 @@ const HomePage = () => {
             {myRooms.length > 0 ? (
               <RoomList>
                 {myRooms.map((room) => (
-                  <RoomCard
-                    key={room.id}
-                    onClick={() => navigate(`/room/${room.id}`)}
-                  >
-                    <RoomInformation>
+                  <RoomCard key={room.id}>
+                    <RoomInformation
+                      onClick={() => navigate(`/room/${room.id}`)}
+                    >
                       <RoomName>{room.name}</RoomName>
                       <RoomDescription>{room.description}</RoomDescription>
                     </RoomInformation>
                     <ButtonGnb>
-                      <InviteBtn>초대</InviteBtn>
+                      <InviteBtn onClick={() => handleInviteClick(room)}>
+                        초대
+                      </InviteBtn>
+                      <Modal
+                        isOpen={isInviteModalOpen}
+                        onClose={closeInviteModal}
+                      >
+                        <h3>초대하기</h3>
+                        <p>
+                          <strong>{selectedRoom?.name}</strong> 방에 친구를
+                          초대하시겠습니까?
+                        </p>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            marginTop: "1.5rem",
+                            gap: "0.5rem",
+                          }}
+                        >
+                          <button
+                            onClick={closeInviteModal}
+                            style={{ padding: "0.5rem 1rem" }}
+                          >
+                            취소
+                          </button>
+                          <button
+                            onClick={() => {
+                              alert("초대 링크 복사 완료!")
+                              closeInviteModal()
+                            }}
+                            style={{
+                              padding: "0.5rem 1rem",
+                              backgroundColor: "#4caf50",
+                              color: "white",
+                              border: "none",
+                            }}
+                          >
+                            초대 링크 복사
+                          </button>
+                        </div>
+                      </Modal>
                       <ModifyBtn>수정</ModifyBtn>
                     </ButtonGnb>
                   </RoomCard>
