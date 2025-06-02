@@ -1,5 +1,12 @@
 import { signOut } from "firebase/auth"
-import { collection, getDocs, query, where } from "firebase/firestore"
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
@@ -7,8 +14,10 @@ import useAuth from "../../hooks/useAuth"
 import { auth, db } from "../../libs/firebase"
 interface Room {
   id: string
-  title: string
-  ownerUid: string
+  name: string
+  createdBy: string
+  description: string
+  createdByName?: string
 }
 
 const HomePage = () => {
@@ -24,15 +33,27 @@ const HomePage = () => {
       try {
         const q = query(
           collection(db, "rooms"),
-          where("ownerUid", "==", user.uid),
+          where("createdBy", "==", user.uid),
         )
         const querySnapshot = await getDocs(q)
-        const rooms = querySnapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() } as Room),
+        const roomsData = await Promise.all(
+          querySnapshot.docs.map(async (docSnap) => {
+            const data = docSnap.data() as Room
+            const userRef = doc(db, "users", data.createdBy)
+            const userDoc = await getDoc(userRef)
+            const nickname = userDoc.exists()
+              ? userDoc.data().displayName
+              : "알 수 없음"
+            return {
+              ...data,
+              id: docSnap.id,
+              createdByName: nickname,
+            }
+          }),
         )
-        setMyRooms(rooms)
+        setMyRooms(roomsData)
       } catch (error) {
-        console.error("방 목록 조회 실패", error)
+        console.error("방 목록 또는 닉네임 조회 실패", error)
       }
     }
 
@@ -97,11 +118,23 @@ const HomePage = () => {
           <SectionTitle>내 방 리스트</SectionTitle>
           <Box>
             {myRooms.length > 0 ? (
-              <ul>
+              <RoomList>
                 {myRooms.map((room) => (
-                  <li key={room.id}>{room.title}</li>
+                  <RoomCard
+                    key={room.id}
+                    onClick={() => navigate(`/room/${room.id}`)}
+                  >
+                    <RoomInformation>
+                      <RoomName>{room.name}</RoomName>
+                      <RoomDescription>{room.description}</RoomDescription>
+                    </RoomInformation>
+                    <ButtonGnb>
+                      <InviteBtn>초대</InviteBtn>
+                      <ModifyBtn>수정</ModifyBtn>
+                    </ButtonGnb>
+                  </RoomCard>
                 ))}
-              </ul>
+              </RoomList>
             ) : (
               <Message>
                 방이 없습니다
@@ -258,4 +291,89 @@ const Message = styled.p`
   text-align: center;
   font-size: 1.1rem;
   line-height: 1.6;
+`
+
+const RoomList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+`
+const RoomCard = styled.div`
+  padding: 1rem;
+  border-top: 1px solid #ccc;
+  cursor: pointer;
+  background-color: #fafafa;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+
+  &:hover {
+    background-color: #f0f0f0;
+  }
+`
+const RoomInformation = styled.div`
+  width: 70%;
+`
+
+const RoomName = styled.h4`
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+`
+
+const RoomDescription = styled.p`
+  margin: 0;
+  font-size: 0.875rem;
+  color: #666;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+`
+
+const ButtonGnb = styled.div`
+  display: flex;
+  justify-content: space-between;
+  width: 25%;
+`
+const InviteBtn = styled.button`
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  font-size: 0.95rem;
+  padding: 0.2rem 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: #45a049;
+  }
+`
+
+const ModifyBtn = styled.button`
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  font-size: 0.95rem;
+  padding: 0.2rem 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: #1976d2;
+  }
 `
