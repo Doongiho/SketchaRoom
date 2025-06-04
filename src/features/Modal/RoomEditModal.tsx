@@ -1,4 +1,4 @@
-import { doc, updateDoc } from "firebase/firestore"
+import { deleteDoc, doc, updateDoc } from "firebase/firestore"
 import { useState } from "react"
 import styled from "styled-components"
 import { db } from "../../libs/firebase"
@@ -36,6 +36,21 @@ const RoomEditModal = ({
     }
   }
 
+  const handleDelete = async () => {
+    const confirmDelete = window.confirm("정말로 이 방을 삭제하시겠습니까?")
+    if (!confirmDelete) return
+
+    try {
+      await deleteDoc(doc(db, "rooms", roomId))
+      alert("방이 삭제되었습니다.")
+      onUpdate()
+      onClose()
+    } catch (error) {
+      console.error("방 삭제 실패:", error)
+      alert("방 삭제 중 오류가 발생했습니다.")
+    }
+  }
+
   return (
     <Overlay>
       <ModalBox>
@@ -54,6 +69,7 @@ const RoomEditModal = ({
           <Button onClick={handleSave}>저장</Button>
           <Button onClick={onClose}>취소</Button>
         </ButtonGroup>
+        <Button onClick={handleDelete}>삭제</Button>
       </ModalBox>
     </Overlay>
   )
