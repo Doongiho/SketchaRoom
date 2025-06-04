@@ -1,4 +1,4 @@
-import { signOut } from "firebase/auth"
+import { signOut, type User } from "firebase/auth"
 import {
   collection,
   doc,
@@ -7,20 +7,50 @@ import {
   query,
   where,
 } from "firebase/firestore"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
 import Modal from "../../components/Modal"
 import useAuth from "../../hooks/useAuth"
 import { auth, db } from "../../libs/firebase"
 import InviteModalContent from "../Modal/InviteModal"
-
+import RoomEditModal from "../Modal/RoomEditModal"
 interface Room {
   id: string
   name: string
   createdBy: string
   description: string
   createdByName?: string
+}
+
+const fetchRooms = async (
+  user: User | null,
+  setMyRooms: React.Dispatch<React.SetStateAction<Room[]>>,
+) => {
+  if (!user) return
+
+  try {
+    const q = query(collection(db, "rooms"), where("createdBy", "==", user.uid))
+    const querySnapshot = await getDocs(q)
+    const roomsData = await Promise.all(
+      querySnapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data() as Room
+        const userRef = doc(db, "users", data.createdBy)
+        const userDoc = await getDoc(userRef)
+        const nickname = userDoc.exists()
+          ? userDoc.data().displayName
+          : "알 수 없음"
+        return {
+          ...data,
+          id: docSnap.id,
+          createdByName: nickname,
+        }
+      }),
+    )
+    setMyRooms(roomsData)
+  } catch (error) {
+    console.error("방 목록 또는 닉네임 조회 실패", error)
+  }
 }
 
 const HomePage = () => {
@@ -30,40 +60,18 @@ const HomePage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editTargetRoom, setEditTargetRoom] = useState<Room | null>(null)
+
+  const refreshRooms = useCallback(() => {
+    fetchRooms(user, setMyRooms)
+  }, [user])
 
   useEffect(() => {
-    if (!user) return
-
-    const fetchRooms = async () => {
-      try {
-        const q = query(
-          collection(db, "rooms"),
-          where("createdBy", "==", user.uid),
-        )
-        const querySnapshot = await getDocs(q)
-        const roomsData = await Promise.all(
-          querySnapshot.docs.map(async (docSnap) => {
-            const data = docSnap.data() as Room
-            const userRef = doc(db, "users", data.createdBy)
-            const userDoc = await getDoc(userRef)
-            const nickname = userDoc.exists()
-              ? userDoc.data().displayName
-              : "알 수 없음"
-            return {
-              ...data,
-              id: docSnap.id,
-              createdByName: nickname,
-            }
-          }),
-        )
-        setMyRooms(roomsData)
-      } catch (error) {
-        console.error("방 목록 또는 닉네임 조회 실패", error)
-      }
+    if (user) {
+      refreshRooms()
     }
-
-    fetchRooms()
-  }, [user])
+  }, [user, refreshRooms])
 
   const toggleMenu = () => {
     setIsMenuOpen((prev) => !prev)
@@ -81,7 +89,7 @@ const HomePage = () => {
     try {
       await signOut(auth)
       alert("로그아웃 되었습니다.")
-      navigate("/login") 
+      navigate("/login")
     } catch (error) {
       console.error("로그아웃 실패:", error)
       alert("로그아웃 중 오류가 발생했습니다.")
@@ -96,6 +104,16 @@ const HomePage = () => {
   const closeInviteModal = () => {
     setIsInviteModalOpen(false)
     setSelectedRoom(null)
+  }
+
+  const handleModifyClick = (room: Room) => {
+    setEditTargetRoom(room)
+    setIsEditModalOpen(true)
+  }
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false)
+    setEditTargetRoom(null)
   }
 
   return (
@@ -157,7 +175,25 @@ const HomePage = () => {
                           />
                         </Modal>
                       )}
-                      <ModifyBtn>수정</ModifyBtn>
+                      <ModifyBtn onClick={() => handleModifyClick(room)}>
+                        수정
+                      </ModifyBtn>
+                      {editTargetRoom && (
+                        <Modal
+                          isOpen={isEditModalOpen}
+                          onClose={closeEditModal}
+                        >
+                          <RoomEditModal
+                            roomId={editTargetRoom.id}
+                            initialName={editTargetRoom.name}
+                            initialDescription={editTargetRoom.description}
+                            onClose={closeEditModal}
+                            onUpdate={() => {
+                              refreshRooms()
+                            }}
+                          />
+                        </Modal>
+                      )}
                     </ButtonGnb>
                   </RoomCard>
                 ))}
