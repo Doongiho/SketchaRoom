@@ -13,6 +13,7 @@ import styled from "styled-components"
 import Modal from "../../components/Modal"
 import useAuth from "../../hooks/useAuth"
 import { auth, db } from "../../libs/firebase"
+import InviteModalContent from "../Modal/InviteModal"
 
 interface Room {
   id: string
@@ -80,7 +81,7 @@ const HomePage = () => {
     try {
       await signOut(auth)
       alert("로그아웃 되었습니다.")
-      navigate("/login") // 로그아웃 후 이동할 경로
+      navigate("/login") 
     } catch (error) {
       console.error("로그아웃 실패:", error)
       alert("로그아웃 중 오류가 발생했습니다.")
@@ -145,45 +146,17 @@ const HomePage = () => {
                       <InviteBtn onClick={() => handleInviteClick(room)}>
                         초대
                       </InviteBtn>
-                      <Modal
-                        isOpen={isInviteModalOpen}
-                        onClose={closeInviteModal}
-                      >
-                        <h3>초대하기</h3>
-                        <p>
-                          <strong>{selectedRoom?.name}</strong> 방에 친구를
-                          초대하시겠습니까?
-                        </p>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "flex-end",
-                            marginTop: "1.5rem",
-                            gap: "0.5rem",
-                          }}
+                      {selectedRoom && (
+                        <Modal
+                          isOpen={isInviteModalOpen}
+                          onClose={closeInviteModal}
                         >
-                          <button
-                            onClick={closeInviteModal}
-                            style={{ padding: "0.5rem 1rem" }}
-                          >
-                            취소
-                          </button>
-                          <button
-                            onClick={() => {
-                              alert("초대 링크 복사 완료!")
-                              closeInviteModal()
-                            }}
-                            style={{
-                              padding: "0.5rem 1rem",
-                              backgroundColor: "#4caf50",
-                              color: "white",
-                              border: "none",
-                            }}
-                          >
-                            초대 링크 복사
-                          </button>
-                        </div>
-                      </Modal>
+                          <InviteModalContent
+                            roomId={selectedRoom.id}
+                            onClose={closeInviteModal}
+                          />
+                        </Modal>
+                      )}
                       <ModifyBtn>수정</ModifyBtn>
                     </ButtonGnb>
                   </RoomCard>
