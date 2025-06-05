@@ -18,12 +18,23 @@ import {
   setDoc,
 } from "firebase/firestore"
 import { auth, db, googleProvider } from "../../libs/firebase"
+import { useUserStore } from "../../stores/useUserStore"
 
 export const loginWithEmail = async (
   email: string,
   password: string,
 ): Promise<UserCredential> => {
-  return await signInWithEmailAndPassword(auth, email, password)
+  const result = await signInWithEmailAndPassword(auth, email, password)
+  const user = result.user
+
+  useUserStore.getState().setUser({
+    uid: user.uid,
+    email: user.email ?? "",
+    displayName: user.displayName ?? "",
+    photoURL: user.photoURL ?? "",
+  })
+
+  return result
 }
 
 export const registerWithEmail = async (
@@ -45,6 +56,13 @@ export const registerWithEmail = async (
     createdAt: serverTimestamp(),
   })
 
+  useUserStore.getState().setUser({
+    uid: userCredential.user.uid,
+    email,
+    displayName,
+    photoURL: "",
+  })
+
   return userCredential
 }
 
@@ -64,6 +82,13 @@ export const loginWithGoogle = async (): Promise<UserCredential> => {
     { merge: true },
   )
 
+  useUserStore.getState().setUser({
+    uid: user.uid,
+    email: user.email ?? "",
+    displayName: user.displayName ?? "",
+    photoURL: user.photoURL ?? "",
+  })
+
   return result
 }
 
@@ -76,7 +101,15 @@ export const getCurrentUserProfile = async () => {
 
   if (!snapshot.exists()) throw new Error("사용자 정보가 존재하지 않습니다.")
 
-  return snapshot.data()
+  const data = snapshot.data()
+  useUserStore.getState().setUser({
+    uid: data.uid,
+    email: data.email,
+    displayName: data.displayName,
+    photoURL: data.photoURL ?? "",
+  })
+
+  return data
 }
 
 export const handlePasswordUpdate = async (
@@ -93,6 +126,7 @@ export const handlePasswordUpdate = async (
 
 export const logout = async () => {
   await signOut(auth)
+  useUserStore.getState().clearUser()
 }
 
 export const deleteAccount = async (): Promise<void> => {
@@ -100,6 +134,6 @@ export const deleteAccount = async (): Promise<void> => {
   if (!user) throw new Error("로그인된 사용자가 없습니다.")
 
   await deleteDoc(doc(db, "users", user.uid))
-
   await deleteUser(user)
+  useUserStore.getState().clearUser()
 }

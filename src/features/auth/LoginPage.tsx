@@ -1,12 +1,13 @@
-import { useState } from "react"
-import styled from "styled-components"
-import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth"
-import { auth, db, googleProvider } from "../../libs/firebase"
 import { FirebaseError } from "firebase/app"
-import { useNavigate } from "react-router-dom"
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"
+import { signInWithPopup } from "firebase/auth"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { useState } from "react"
 import { FiEye, FiEyeOff } from "react-icons/fi"
+import { useNavigate } from "react-router-dom"
+import styled from "styled-components"
 import InputField from "../../components/InputField"
+import { auth, db, googleProvider } from "../../libs/firebase"
+import { loginWithEmail } from "./AuthService"
 
 const firebaseErrorMessages: Record<string, string> = {
   "auth/user-not-found": "등록되지 않은 이메일입니다.",
@@ -40,7 +41,7 @@ const LoginPage = () => {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, form.email, form.password)
+      await loginWithEmail(form.email, form.password)
       navigate("/")
     } catch (err) {
       if (err instanceof FirebaseError) {
