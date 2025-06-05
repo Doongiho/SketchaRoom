@@ -1,4 +1,4 @@
-import { signOut, type User } from "firebase/auth"
+import { signOut } from "firebase/auth"
 import {
   collection,
   doc,
@@ -15,6 +15,7 @@ import useAuth from "../../hooks/useAuth"
 import { auth, db } from "../../libs/firebase"
 import InviteModalContent from "../Modal/InviteModal"
 import RoomEditModal from "../Modal/RoomEditModal"
+
 interface Room {
   id: string
   name: string
@@ -24,13 +25,11 @@ interface Room {
 }
 
 const fetchRooms = async (
-  user: User | null,
+  uid: string,
   setMyRooms: React.Dispatch<React.SetStateAction<Room[]>>,
 ) => {
-  if (!user) return
-
   try {
-    const q = query(collection(db, "rooms"), where("createdBy", "==", user.uid))
+    const q = query(collection(db, "rooms"), where("createdBy", "==", uid))
     const querySnapshot = await getDocs(q)
     const roomsData = await Promise.all(
       querySnapshot.docs.map(async (docSnap) => {
@@ -64,7 +63,9 @@ const HomePage = () => {
   const [editTargetRoom, setEditTargetRoom] = useState<Room | null>(null)
 
   const refreshRooms = useCallback(() => {
-    fetchRooms(user, setMyRooms)
+    if (user?.uid) {
+      fetchRooms(user.uid, setMyRooms)
+    }
   }, [user])
 
   useEffect(() => {
@@ -164,36 +165,9 @@ const HomePage = () => {
                       <InviteBtn onClick={() => handleInviteClick(room)}>
                         초대
                       </InviteBtn>
-                      {selectedRoom && (
-                        <Modal
-                          isOpen={isInviteModalOpen}
-                          onClose={closeInviteModal}
-                        >
-                          <InviteModalContent
-                            roomId={selectedRoom.id}
-                            onClose={closeInviteModal}
-                          />
-                        </Modal>
-                      )}
                       <ModifyBtn onClick={() => handleModifyClick(room)}>
                         수정
                       </ModifyBtn>
-                      {editTargetRoom && (
-                        <Modal
-                          isOpen={isEditModalOpen}
-                          onClose={closeEditModal}
-                        >
-                          <RoomEditModal
-                            roomId={editTargetRoom.id}
-                            initialName={editTargetRoom.name}
-                            initialDescription={editTargetRoom.description}
-                            onClose={closeEditModal}
-                            onUpdate={() => {
-                              refreshRooms()
-                            }}
-                          />
-                        </Modal>
-                      )}
                     </ButtonGnb>
                   </RoomCard>
                 ))}
@@ -219,6 +193,27 @@ const HomePage = () => {
           </Box>
         </Section>
       </SectionWrapper>
+
+      {selectedRoom && isInviteModalOpen && (
+        <Modal isOpen={true} onClose={closeInviteModal}>
+          <InviteModalContent
+            roomId={selectedRoom.id}
+            onClose={closeInviteModal}
+          />
+        </Modal>
+      )}
+
+      {editTargetRoom && isEditModalOpen && (
+        <Modal isOpen={true} onClose={closeEditModal}>
+          <RoomEditModal
+            roomId={editTargetRoom.id}
+            initialName={editTargetRoom.name}
+            initialDescription={editTargetRoom.description}
+            onClose={closeEditModal}
+            onUpdate={refreshRooms}
+          />
+        </Modal>
+      )}
     </Container>
   )
 }
