@@ -1,90 +1,31 @@
 import { signOut } from "firebase/auth"
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore"
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
 import Modal from "../../components/Modal"
 import useAuth from "../../hooks/useAuth"
-import { auth, db } from "../../libs/firebase"
+import { useMyRooms } from "../../hooks/useMyRooms"
+import { auth } from "../../libs/firebase"
+import type { Room } from "../../stores/useRoomStore"
+import { useRoomStore } from "../../stores/useRoomStore"
 import InviteModalContent from "../Modal/InviteModal"
 import RoomEditModal from "../Modal/RoomEditModal"
-
-interface Room {
-  id: string
-  name: string
-  createdBy: string
-  description: string
-  createdByName?: string
-}
-
-const fetchRooms = async (
-  uid: string,
-  setMyRooms: React.Dispatch<React.SetStateAction<Room[]>>,
-) => {
-  try {
-    const q = query(collection(db, "rooms"), where("createdBy", "==", uid))
-    const querySnapshot = await getDocs(q)
-    const roomsData = await Promise.all(
-      querySnapshot.docs.map(async (docSnap) => {
-        const data = docSnap.data() as Room
-        const userRef = doc(db, "users", data.createdBy)
-        const userDoc = await getDoc(userRef)
-        const nickname = userDoc.exists()
-          ? userDoc.data().displayName
-          : "알 수 없음"
-        return {
-          ...data,
-          id: docSnap.id,
-          createdByName: nickname,
-        }
-      }),
-    )
-    setMyRooms(roomsData)
-  } catch (error) {
-    console.error("방 목록 또는 닉네임 조회 실패", error)
-  }
-}
 
 const HomePage = () => {
   const user = useAuth()
   const navigate = useNavigate()
-  const [myRooms, setMyRooms] = useState<Room[]>([])
+  const { loading, error, refetch } = useMyRooms(user?.uid)
+  const rooms = useRoomStore((state) => state.rooms)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editTargetRoom, setEditTargetRoom] = useState<Room | null>(null)
 
-  const refreshRooms = useCallback(() => {
-    if (user?.uid) {
-      fetchRooms(user.uid, setMyRooms)
-    }
-  }, [user])
+  const toggleMenu = () => setIsMenuOpen((prev) => !prev)
 
-  useEffect(() => {
-    if (user) {
-      refreshRooms()
-    }
-  }, [user, refreshRooms])
-
-  const toggleMenu = () => {
-    setIsMenuOpen((prev) => !prev)
-  }
-
-  const handleGoToProfile = () => {
-    navigate("/profile")
-  }
-
-  const handleGoToCreateRoom = () => {
-    navigate("/createRoom")
-  }
+  const handleGoToProfile = () => navigate("/profile")
+  const handleGoToCreateRoom = () => navigate("/createRoom")
 
   const handleLogout = async () => {
     try {
@@ -151,9 +92,13 @@ const HomePage = () => {
         <Section>
           <SectionTitle>내 방 리스트</SectionTitle>
           <Box>
-            {myRooms.length > 0 ? (
+            {loading ? (
+              <p>불러오는 중...</p>
+            ) : error ? (
+              <p>에러 발생: {error.message}</p>
+            ) : rooms.length > 0 ? (
               <RoomList>
-                {myRooms.map((room) => (
+                {rooms.map((room) => (
                   <RoomCard key={room.id}>
                     <RoomInformation
                       onClick={() => navigate(`/room/${room.id}`)}
@@ -210,7 +155,7 @@ const HomePage = () => {
             initialName={editTargetRoom.name}
             initialDescription={editTargetRoom.description}
             onClose={closeEditModal}
-            onUpdate={refreshRooms}
+            onUpdate={refetch}
           />
         </Modal>
       )}
