@@ -12,17 +12,20 @@ const CanvasRoomPage = () => {
   const resizeCanvas = () => {
     const canvasEl = canvasRef.current
     const wrapper = document.getElementById("canvas-wrapper")
-
     if (!canvasEl || !wrapper) return
 
+    const ratio = window.devicePixelRatio || 1
     const { clientWidth, clientHeight } = wrapper
-    canvasEl.width = clientWidth
-    canvasEl.height = clientHeight
+    canvasEl.width = clientWidth * ratio
+    canvasEl.height = clientHeight * ratio
+    canvasEl.style.width = `${clientWidth}px`
+    canvasEl.style.height = `${clientHeight}px`
 
     const canvas = fabricCanvasRef.current
     if (canvas) {
       canvas.setWidth(clientWidth)
       canvas.setHeight(clientHeight)
+      canvas.setZoom(ratio)
       canvas.renderAll()
     }
   }
@@ -157,7 +160,7 @@ const CanvasRoomPage = () => {
       setActiveTool("diamond")
     }
   }
-  
+
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value
     setSelectedColor(newColor)
@@ -182,7 +185,6 @@ const CanvasRoomPage = () => {
     if (!canvas || !file) return
 
     const reader = new FileReader()
-
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string
       const img = new Image()
@@ -199,17 +201,11 @@ const CanvasRoomPage = () => {
         canvas.renderAll()
         setActiveTool("image")
       }
-      img.onerror = () => {
-        console.error("이미지 로딩 실패:", dataUrl.slice(0, 100))
-      }
       img.src = dataUrl
     }
-
     reader.readAsDataURL(file)
     e.target.value = ""
   }
-
-
 
   return (
     <Wrapper>
@@ -218,68 +214,34 @@ const CanvasRoomPage = () => {
       </CanvasWrapper>
       <Toolbar>
         <Section>
-          <BackDiv>
-            <BackButton />
-          </BackDiv>
           <Title>그리기</Title>
           <ToolRow>
-            <Button
-              onClick={handleAddText}
-              className={activeTool === "text" ? "active" : ""}
-            >
-              A
-            </Button>
-            <Button
-              onClick={handleDraw}
-              className={activeTool === "draw" ? "active" : ""}
-            >
-              ✏️
-            </Button>
+            <Button onClick={handleAddText} className={activeTool === "text" ? "active" : ""}>A</Button>
+            <Button onClick={handleDraw} className={activeTool === "draw" ? "active" : ""}>✏️</Button>
             <Button disabled>🧽</Button>
           </ToolRow>
         </Section>
         <Section>
           <Title>도형</Title>
           <ToolRow>
-            <Button
-              onClick={handleAddRect}
-              className={activeTool === "rect" ? "active" : ""}
-            >
-              ▭
-            </Button>
-            <Button
-              onClick={handleAddCircle}
-              className={activeTool === "circle" ? "active" : ""}
-            >
-              ●
-            </Button>
-            <Button
-              onClick={handleAddTriangle}
-              className={activeTool === "triangle" ? "active" : ""}
-            >
-              ▲
-            </Button>
-            <Button
-              onClick={handleAddDiamond}
-              className={activeTool === "triangle" ? "active" : ""}
-            >◆</Button>
+            <Button onClick={handleAddRect} className={activeTool === "rect" ? "active" : ""}>▭</Button>
+            <Button onClick={handleAddCircle} className={activeTool === "circle" ? "active" : ""}>●</Button>
+            <Button onClick={handleAddTriangle} className={activeTool === "triangle" ? "active" : ""}>▲</Button>
+            <Button onClick={handleAddDiamond} className={activeTool === "diamond" ? "active" : ""}>◆</Button>
           </ToolRow>
         </Section>
         <Section>
           <Title>색상</Title>
-          <input
+          <ColorPicker
             type="color"
             value={selectedColor}
             onChange={handleColorChange}
-            style={{ width: "100%", height: "40px", border: "none", background: "none", cursor: "pointer" }}
           />
         </Section>
         <Section>
           <Title>이미지</Title>
           <label htmlFor="imageUpload">
-            <Button as="span" className={activeTool === "image" ? "active" : ""}>
-              이미지 추가
-            </Button>
+            <Button as="span" className={activeTool === "image" ? "active" : ""}>이미지 추가</Button>
           </label>
           <input
             id="imageUpload"
@@ -290,6 +252,9 @@ const CanvasRoomPage = () => {
           />
         </Section>
       </Toolbar>
+      <BackDiv>
+        <BackButton />
+      </BackDiv>
     </Wrapper>
   )
 }
@@ -299,6 +264,10 @@ export default CanvasRoomPage
 const Wrapper = styled.div`
   display: flex;
   height: 100vh;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `
 
 const CanvasWrapper = styled.div`
@@ -310,11 +279,27 @@ const CanvasWrapper = styled.div`
 const Toolbar = styled.div`
   width: 180px;
   border-left: 1px solid #000;
-  padding: 1rem;
+  padding: 2rem;
   background-color: #f9f9f9;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    height: auto;
+    border-left: none;
+    border-top: 1px solid #ccc;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    padding: 1rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    background: #f9f9f9;
+    z-index: 10;
+  }
 `
 
 const Section = styled.div`
@@ -322,6 +307,9 @@ const Section = styled.div`
   flex-direction: column;
   gap: 0.5rem;
   align-items: center;
+  width: 100%;            
+  max-width: 160px;        
+  box-sizing: border-box;
 `
 
 const ToolRow = styled.div`
@@ -329,13 +317,22 @@ const ToolRow = styled.div`
   gap: 0.5rem;
   flex-wrap: wrap;
   justify-content: center;
+
+  @media (max-width: 768px) {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);  
+    gap: 0.5rem;
+    width: 100%;
+  }
 `
 
 const Canvas = styled.canvas`
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 0; 
+  z-index: 0;
+  width: 100%;
+  height: 100%;
 `
 
 const Button = styled.button`
@@ -356,7 +353,32 @@ const Title = styled.div`
 `
 
 const BackDiv = styled.div`
-    display: flex;
-    justify-content: end;
-    width:100%;  
+  position: fixed;
+  top: 10px; 
+  right: 10px;
+  transform: translateX(-50%);
+  z-index: 20;
+`
+
+const ColorPicker = styled.input`
+  appearance: none;      
+  -webkit-appearance: none; 
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+
+  &::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  &::-webkit-color-swatch {
+    border: none;
+    border-radius: 50%;
+  }
 `
