@@ -176,6 +176,41 @@ const CanvasRoomPage = () => {
     }
   }
 
+  const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const canvas = fabricCanvasRef.current
+    const file = e.target.files?.[0]
+    if (!canvas || !file) return
+
+    const reader = new FileReader()
+
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string
+      const img = new Image()
+      img.onload = () => {
+        const fabricImg = new fabric.Image(img, {
+          left: 100,
+          top: 100,
+          scaleX: 0.3,
+          scaleY: 0.3,
+          selectable: true,
+        })
+        canvas.add(fabricImg)
+        canvas.setActiveObject(fabricImg)
+        canvas.renderAll()
+        setActiveTool("image")
+      }
+      img.onerror = () => {
+        console.error("이미지 로딩 실패:", dataUrl.slice(0, 100))
+      }
+      img.src = dataUrl
+    }
+
+    reader.readAsDataURL(file)
+    e.target.value = ""
+  }
+
+
+
   return (
     <Wrapper>
       <CanvasWrapper id="canvas-wrapper">
@@ -240,7 +275,19 @@ const CanvasRoomPage = () => {
           />
         </Section>
         <Section>
-          <Button disabled>이미지추가</Button>
+          <Title>이미지</Title>
+          <label htmlFor="imageUpload">
+            <Button as="span" className={activeTool === "image" ? "active" : ""}>
+              이미지 추가
+            </Button>
+          </label>
+          <input
+            id="imageUpload"
+            type="file"
+            accept="image/*"
+            onChange={handleAddImage}
+            style={{ display: "none" }}
+          />
         </Section>
       </Toolbar>
     </Wrapper>
@@ -288,6 +335,7 @@ const Canvas = styled.canvas`
   position: absolute;
   top: 0;
   left: 0;
+  z-index: 0; 
 `
 
 const Button = styled.button`
