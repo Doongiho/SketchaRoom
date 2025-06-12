@@ -77,6 +77,88 @@ const CanvasRoomPage = () => {
     }
   }
 
+  const handleAddRect = () => {
+    const canvas = fabricCanvasRef.current
+    if (canvas) {
+      canvas.isDrawingMode = false
+      const rect = new fabric.Rect({
+        left: 100,
+        top: 100,
+        fill: 'lightblue',
+        width: 100,
+        height: 70,
+        selectable: true,
+      })
+      canvas.add(rect)
+      canvas.setActiveObject(rect)
+      canvas.renderAll()
+      setActiveTool("rect")
+    }
+  }
+
+  const handleAddCircle = () => {
+    const canvas = fabricCanvasRef.current
+    if (canvas) {
+      canvas.isDrawingMode = false
+      const circle = new fabric.Circle({
+        left: 150,
+        top: 150,
+        radius: 40,
+        fill: 'lightgreen',
+        selectable: true,
+      })
+      canvas.add(circle)
+      canvas.setActiveObject(circle)
+      canvas.renderAll()
+      setActiveTool("circle")
+    }
+  }
+
+  const handleAddTriangle = () => {
+    const canvas = fabricCanvasRef.current
+    if (canvas) {
+      canvas.isDrawingMode = false
+      const triangle = new fabric.Triangle({
+        left: 200,
+        top: 200,
+        width: 80,
+        height: 80,
+        fill: 'pink',
+        selectable: true,
+      })
+      canvas.add(triangle)
+      canvas.setActiveObject(triangle)
+      canvas.renderAll()
+      setActiveTool("triangle")
+    }
+  }
+
+  const handleAddDiamond = () => {
+    const canvas = fabricCanvasRef.current
+    if (canvas) {
+      canvas.isDrawingMode = false
+      const diamond = new fabric.Polygon([
+        { x: 0, y: -50 },
+        { x: 50, y: 0 },
+        { x: 0, y: 50 },
+        { x: -50, y: 0 },
+      ], {
+        left: 250,
+        top: 250,
+        fill: 'violet',
+        selectable: true,
+        originX: 'center',
+        originY: 'center',
+      })
+      canvas.add(diamond)
+      canvas.setActiveObject(diamond)
+      canvas.renderAll()
+      setActiveTool("diamond")
+    }
+  }
+
+
+
   return (
     <Wrapper>
       <CanvasWrapper id="canvas-wrapper">
@@ -105,25 +187,39 @@ const CanvasRoomPage = () => {
             <Button disabled>🧽</Button>
           </ToolRow>
         </Section>
-
         <Section>
           <Title>도형</Title>
           <ToolRow>
-            <Button disabled>▭</Button>
-            <Button disabled>●</Button>
-            <Button disabled>▲</Button>
-            <Button disabled>◆</Button>
+            <Button
+              onClick={handleAddRect}
+              className={activeTool === "rect" ? "active" : ""}
+            >
+              ▭
+            </Button>
+            <Button
+              onClick={handleAddCircle}
+              className={activeTool === "circle" ? "active" : ""}
+            >
+              ●
+            </Button>
+            <Button
+              onClick={handleAddTriangle}
+              className={activeTool === "triangle" ? "active" : ""}
+            >
+              ▲
+            </Button>
+            <Button
+              onClick={handleAddDiamond}
+              className={activeTool === "triangle" ? "active" : ""}
+            >◆</Button>
           </ToolRow>
         </Section>
-
         <Section>
           <Title>색상</Title>
           <Button disabled>🎨</Button>
         </Section>
-
         <Section>
           <Button disabled>이미지추가</Button>
-          <Button disabled>나가기</Button>
         </Section>
       </Toolbar>
     </Wrapper>
