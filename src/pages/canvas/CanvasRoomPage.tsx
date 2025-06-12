@@ -55,7 +55,7 @@ const CanvasRoomPage = () => {
         left: 100,
         top: 100,
         fontSize: 20,
-        fill: "#000",
+        fill: selectedColor,
         editable: true,
         selectable: true,
       })
@@ -70,7 +70,7 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (canvas) {
       const brush = new fabric.PencilBrush(canvas)
-      brush.color = "blue"
+      brush.color = selectedColor 
       brush.width = 2
       canvas.freeDrawingBrush = brush
       canvas.isDrawingMode = true
@@ -157,17 +157,22 @@ const CanvasRoomPage = () => {
       setActiveTool("diamond")
     }
   }
-
   
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedColor(e.target.value)
+    const newColor = e.target.value
+    setSelectedColor(newColor)
 
     const canvas = fabricCanvasRef.current
-    const activeObject = canvas?.getActiveObject()
+    if (!canvas) return
 
-    if (canvas && activeObject && 'set' in activeObject) {
-      activeObject.set("fill", e.target.value)
+    const activeObject = canvas.getActiveObject()
+    if (activeObject && 'set' in activeObject) {
+      activeObject.set("fill", newColor)
       canvas.renderAll()
+    }
+
+    if (canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.color = newColor
     }
   }
 
@@ -176,7 +181,6 @@ const CanvasRoomPage = () => {
       <CanvasWrapper id="canvas-wrapper">
         <Canvas id="canvas" ref={canvasRef} />
       </CanvasWrapper>
-
       <Toolbar>
         <Section>
           <BackDiv>
