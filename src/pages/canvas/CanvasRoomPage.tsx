@@ -29,7 +29,8 @@ const CanvasRoomPage = () => {
     if (!canvasEl) return
 
     const canvas = new fabric.Canvas(canvasEl, {
-      isDrawingMode: true,
+      isDrawingMode: false,
+      selection: true,
     })
     fabricCanvasRef.current = canvas
 
@@ -43,6 +44,23 @@ const CanvasRoomPage = () => {
     }
   }, [])
 
+  const handleAddText = () => {
+    const canvas = fabricCanvasRef.current
+    if (canvas) {
+      const text = new fabric.IText("텍스트", {
+        left: 100,
+        top: 100,
+        fontSize: 20,
+        fill: "#000",
+        editable: true,
+        selectable: true,
+      })
+      canvas.add(text)
+      canvas.setActiveObject(text)
+      canvas.renderAll()
+    }
+  }
+
   return (
     <Wrapper>
       <CanvasWrapper id="canvas-wrapper">
@@ -53,30 +71,30 @@ const CanvasRoomPage = () => {
         <Section>
           <Title>그리기</Title>
           <ToolRow>
-            <Button>A</Button>
-            <Button>✏️</Button>
-            <Button>🧽</Button>
+            <Button onClick={handleAddText}>A</Button>
+            <Button disabled>✏️</Button>
+            <Button disabled>🧽</Button>
           </ToolRow>
         </Section>
 
         <Section>
           <Title>도형</Title>
           <ToolRow>
-            <Button>▭</Button>
-            <Button>●</Button>
-            <Button>▲</Button>
-            <Button>◆</Button>
+            <Button disabled>▭</Button>
+            <Button disabled>●</Button>
+            <Button disabled>▲</Button>
+            <Button disabled>◆</Button>
           </ToolRow>
         </Section>
 
         <Section>
           <Title>색상</Title>
-          <Button>🎨</Button>
+          <Button disabled>🎨</Button>
         </Section>
 
         <Section>
-          <Button>이미지추가</Button>
-          <Button>나가기</Button>
+          <Button disabled>이미지추가</Button>
+          <Button disabled>나가기</Button>
         </Section>
       </Toolbar>
     </Wrapper>
@@ -125,6 +143,7 @@ const Canvas = styled.canvas`
   top: 0;
   left: 0;
 `
+
 const Button = styled.button`
   padding: 6px 12px;
   border: 1px solid #ccc;
