@@ -7,6 +7,7 @@ const CanvasRoomPage = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
   const [activeTool, setActiveTool] = useState<string>("")
+  const [selectedColor, setSelectedColor] = useState<string>("#000000")
 
   const resizeCanvas = () => {
     const canvasEl = canvasRef.current
@@ -157,7 +158,18 @@ const CanvasRoomPage = () => {
     }
   }
 
+  
+  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedColor(e.target.value)
 
+    const canvas = fabricCanvasRef.current
+    const activeObject = canvas?.getActiveObject()
+
+    if (canvas && activeObject && 'set' in activeObject) {
+      activeObject.set("fill", e.target.value)
+      canvas.renderAll()
+    }
+  }
 
   return (
     <Wrapper>
@@ -216,7 +228,12 @@ const CanvasRoomPage = () => {
         </Section>
         <Section>
           <Title>색상</Title>
-          <Button disabled>🎨</Button>
+          <input
+            type="color"
+            value={selectedColor}
+            onChange={handleColorChange}
+            style={{ width: "100%", height: "40px", border: "none", background: "none", cursor: "pointer" }}
+          />
         </Section>
         <Section>
           <Button disabled>이미지추가</Button>
