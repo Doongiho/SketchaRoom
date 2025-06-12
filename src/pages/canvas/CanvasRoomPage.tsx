@@ -1,10 +1,11 @@
 import * as fabric from "fabric"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import styled from "styled-components"
 
 const CanvasRoomPage = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
+  const [activeTool, setActiveTool] = useState<string>("")
 
   const resizeCanvas = () => {
     const canvasEl = canvasRef.current
@@ -47,6 +48,7 @@ const CanvasRoomPage = () => {
   const handleAddText = () => {
     const canvas = fabricCanvasRef.current
     if (canvas) {
+      canvas.isDrawingMode = false
       const text = new fabric.IText("텍스트", {
         left: 100,
         top: 100,
@@ -58,6 +60,19 @@ const CanvasRoomPage = () => {
       canvas.add(text)
       canvas.setActiveObject(text)
       canvas.renderAll()
+      setActiveTool("text")
+    }
+  }
+
+  const handleDraw = () => {
+    const canvas = fabricCanvasRef.current
+    if (canvas) {
+      const brush = new fabric.PencilBrush(canvas)
+      brush.color = "blue"
+      brush.width = 2
+      canvas.freeDrawingBrush = brush
+      canvas.isDrawingMode = true
+      setActiveTool("draw")
     }
   }
 
@@ -71,8 +86,18 @@ const CanvasRoomPage = () => {
         <Section>
           <Title>그리기</Title>
           <ToolRow>
-            <Button onClick={handleAddText}>A</Button>
-            <Button disabled>✏️</Button>
+            <Button
+              onClick={handleAddText}
+              className={activeTool === "text" ? "active" : ""}
+            >
+              A
+            </Button>
+            <Button
+              onClick={handleDraw}
+              className={activeTool === "draw" ? "active" : ""}
+            >
+              ✏️
+            </Button>
             <Button disabled>🧽</Button>
           </ToolRow>
         </Section>
@@ -150,6 +175,10 @@ const Button = styled.button`
   background-color: white;
   border-radius: 4px;
   cursor: pointer;
+  &.active {
+    background-color: #d0e8ff;
+    border-color: #3399ff;
+  }
 `
 
 const Title = styled.div`
