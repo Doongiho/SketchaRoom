@@ -1,6 +1,7 @@
 import * as fabric from "fabric"
 import { useEffect, useRef, useState } from "react"
 import styled from "styled-components"
+import BackButton from "../../components/ackButton"
 
 const CanvasRoomPage = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -84,6 +85,9 @@ const CanvasRoomPage = () => {
 
       <Toolbar>
         <Section>
+          <BackDiv>
+            <BackButton />
+          </BackDiv>
           <Title>그리기</Title>
           <ToolRow>
             <Button
@@ -184,4 +188,10 @@ const Button = styled.button`
 const Title = styled.div`
   font-weight: bold;
   margin-bottom: 4px;
+`
+
+const BackDiv = styled.div`
+    display: flex;
+    justify-content: end;
+    width:100%;  
 `

@@ -35,7 +35,8 @@ const Back = styled.button`
   color: #333;
   margin-bottom: 1rem;
   padding: 4px;
-
+  margin: auto 0;
+  
   &:hover {
     color: #000;
   }
