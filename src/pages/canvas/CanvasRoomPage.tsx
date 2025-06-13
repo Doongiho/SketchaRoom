@@ -73,12 +73,40 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (canvas) {
       const brush = new fabric.PencilBrush(canvas)
-      brush.color = selectedColor 
+      brush.color = selectedColor
       brush.width = 2
       canvas.freeDrawingBrush = brush
       canvas.isDrawingMode = true
       setActiveTool("draw")
     }
+  }
+
+  const handleDeleteObject = () => {
+    const canvas = fabricCanvasRef.current
+    if (!canvas) return
+
+    canvas.off("mouse:move")
+
+    const deleteHandler = (
+      e: fabric.TPointerEventInfo<fabric.TPointerEvent>,
+    ) => {
+      const pointer = e.absolutePointer ?? e.pointer
+      if (!pointer) return
+
+      const objects = canvas.getObjects()
+
+      for (const obj of objects) {
+        if (obj.containsPoint(pointer)) {
+          canvas.remove(obj)
+          canvas.renderAll()
+          break
+        }
+      }
+    }
+
+    canvas.on("mouse:move", deleteHandler)
+    canvas.isDrawingMode = false
+    setActiveTool("delete")
   }
 
   const handleAddRect = () => {
@@ -88,7 +116,7 @@ const CanvasRoomPage = () => {
       const rect = new fabric.Rect({
         left: 100,
         top: 100,
-        fill: 'lightblue',
+        fill: "lightblue",
         width: 100,
         height: 70,
         selectable: true,
@@ -108,7 +136,7 @@ const CanvasRoomPage = () => {
         left: 150,
         top: 150,
         radius: 40,
-        fill: 'lightgreen',
+        fill: "lightgreen",
         selectable: true,
       })
       canvas.add(circle)
@@ -127,7 +155,7 @@ const CanvasRoomPage = () => {
         top: 200,
         width: 80,
         height: 80,
-        fill: 'pink',
+        fill: "pink",
         selectable: true,
       })
       canvas.add(triangle)
@@ -141,19 +169,22 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (canvas) {
       canvas.isDrawingMode = false
-      const diamond = new fabric.Polygon([
-        { x: 0, y: -50 },
-        { x: 50, y: 0 },
-        { x: 0, y: 50 },
-        { x: -50, y: 0 },
-      ], {
-        left: 250,
-        top: 250,
-        fill: 'violet',
-        selectable: true,
-        originX: 'center',
-        originY: 'center',
-      })
+      const diamond = new fabric.Polygon(
+        [
+          { x: 0, y: -50 },
+          { x: 50, y: 0 },
+          { x: 0, y: 50 },
+          { x: -50, y: 0 },
+        ],
+        {
+          left: 250,
+          top: 250,
+          fill: "violet",
+          selectable: true,
+          originX: "center",
+          originY: "center",
+        },
+      )
       canvas.add(diamond)
       canvas.setActiveObject(diamond)
       canvas.renderAll()
@@ -169,7 +200,7 @@ const CanvasRoomPage = () => {
     if (!canvas) return
 
     const activeObject = canvas.getActiveObject()
-    if (activeObject && 'set' in activeObject) {
+    if (activeObject && "set" in activeObject) {
       activeObject.set("fill", newColor)
       canvas.renderAll()
     }
@@ -216,18 +247,53 @@ const CanvasRoomPage = () => {
         <Section>
           <Title>그리기</Title>
           <ToolRow>
-            <Button onClick={handleAddText} className={activeTool === "text" ? "active" : ""}>A</Button>
-            <Button onClick={handleDraw} className={activeTool === "draw" ? "active" : ""}>✏️</Button>
-            <Button disabled>🧽</Button>
+            <Button
+              onClick={handleAddText}
+              className={activeTool === "text" ? "active" : ""}
+            >
+              A
+            </Button>
+            <Button
+              onClick={handleDraw}
+              className={activeTool === "draw" ? "active" : ""}
+            >
+              ✏️
+            </Button>
+            <Button
+              onClick={handleDeleteObject}
+              className={activeTool === "delete" ? "active" : ""}
+            >
+              🧽
+            </Button>
           </ToolRow>
         </Section>
         <Section>
           <Title>도형</Title>
           <ToolRow>
-            <Button onClick={handleAddRect} className={activeTool === "rect" ? "active" : ""}>▭</Button>
-            <Button onClick={handleAddCircle} className={activeTool === "circle" ? "active" : ""}>●</Button>
-            <Button onClick={handleAddTriangle} className={activeTool === "triangle" ? "active" : ""}>▲</Button>
-            <Button onClick={handleAddDiamond} className={activeTool === "diamond" ? "active" : ""}>◆</Button>
+            <Button
+              onClick={handleAddRect}
+              className={activeTool === "rect" ? "active" : ""}
+            >
+              ▭
+            </Button>
+            <Button
+              onClick={handleAddCircle}
+              className={activeTool === "circle" ? "active" : ""}
+            >
+              ●
+            </Button>
+            <Button
+              onClick={handleAddTriangle}
+              className={activeTool === "triangle" ? "active" : ""}
+            >
+              ▲
+            </Button>
+            <Button
+              onClick={handleAddDiamond}
+              className={activeTool === "diamond" ? "active" : ""}
+            >
+              ◆
+            </Button>
           </ToolRow>
         </Section>
         <Section>
@@ -241,7 +307,12 @@ const CanvasRoomPage = () => {
         <Section>
           <Title>이미지</Title>
           <label htmlFor="imageUpload">
-            <Button as="span" className={activeTool === "image" ? "active" : ""}>이미지 추가</Button>
+            <Button
+              as="span"
+              className={activeTool === "image" ? "active" : ""}
+            >
+              이미지 추가
+            </Button>
           </label>
           <input
             id="imageUpload"
@@ -307,8 +378,8 @@ const Section = styled.div`
   flex-direction: column;
   gap: 0.5rem;
   align-items: center;
-  width: 100%;            
-  max-width: 160px;        
+  width: 100%;
+  max-width: 160px;
   box-sizing: border-box;
 `
 
@@ -320,7 +391,7 @@ const ToolRow = styled.div`
 
   @media (max-width: 768px) {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);  
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
     width: 100%;
   }
@@ -354,15 +425,15 @@ const Title = styled.div`
 
 const BackDiv = styled.div`
   position: fixed;
-  top: 10px; 
+  top: 10px;
   right: 10px;
   transform: translateX(-50%);
   z-index: 20;
 `
 
 const ColorPicker = styled.input`
-  appearance: none;      
-  -webkit-appearance: none; 
+  appearance: none;
+  -webkit-appearance: none;
   width: 40px;
   height: 40px;
   border: none;
