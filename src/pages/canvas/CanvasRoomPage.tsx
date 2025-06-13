@@ -1,19 +1,71 @@
 import * as fabric from "fabric"
 import { useEffect, useRef, useState } from "react"
+import { useParams } from "react-router-dom"
 import styled from "styled-components"
 import BackButton from "../../components/ackButton"
+import { loadCanvasState, saveCanvasState } from "../../stores/useCanvasStore"
 
 const CanvasRoomPage = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { roomId } = useParams<{ roomId: string }>()
   const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
-  const [activeTool, setActiveTool] = useState<string>("")
-  const [selectedColor, setSelectedColor] = useState<string>("#000000")
+  const [activeTool, setActiveTool] = useState("")
+  const [selectedColor, setSelectedColor] = useState("#000000")
+
+  useEffect(() => {
+    const canvasEl = canvasRef.current
+    if (!canvasEl) return
+
+    if (fabricCanvasRef.current) {
+      fabricCanvasRef.current.dispose()
+      fabricCanvasRef.current = null
+    }
+
+    const canvas = new fabric.Canvas(canvasEl, {
+      isDrawingMode: false,
+      selection: true,
+    })
+    fabricCanvasRef.current = canvas
+
+    const resizeCanvas = () => {
+      const wrapper = document.getElementById("canvas-wrapper")
+      if (!wrapper) return
+
+      const ratio = window.devicePixelRatio || 1
+      canvasEl.width = wrapper.clientWidth * ratio
+      canvasEl.height = wrapper.clientHeight * ratio
+      canvasEl.style.width = `${wrapper.clientWidth}px`
+      canvasEl.style.height = `${wrapper.clientHeight}px`
+
+      canvas.setWidth(wrapper.clientWidth)
+      canvas.setHeight(wrapper.clientHeight)
+      canvas.setZoom(ratio)
+      canvas.renderAll()
+    }
+
+    resizeCanvas()
+    window.addEventListener("resize", resizeCanvas)
+
+    if (roomId) {
+      setTimeout(() => {
+        loadCanvasState(roomId, canvas)
+      }, 100)
+    }
+
+    return () => {
+      window.removeEventListener("resize", resizeCanvas)
+      canvas.dispose()
+      fabricCanvasRef.current = null
+    }
+  }, [roomId])
 
   useEffect(() => {
     const canvas = fabricCanvasRef.current
-    if (!canvas) return
+    if (!canvas || !roomId) return
 
-    const handler = (e: fabric.TPointerEventInfo<fabric.TPointerEvent>) => {
+    const deleteHandler = (
+      e: fabric.TPointerEventInfo<fabric.TPointerEvent>,
+    ) => {
       if (activeTool !== "delete") return
 
       const pointer = e.absolutePointer ?? e.pointer
@@ -29,173 +81,136 @@ const CanvasRoomPage = () => {
       }
     }
 
-    canvas.on("mouse:move", handler)
-    return () => {
-      canvas.off("mouse:move", handler)
+    const saveHandler = () => {
+      console.log("캔버스 저장 호출됨")
+      saveCanvasState(roomId, canvas)
     }
-  }, [activeTool])
 
-  const resizeCanvas = () => {
-    const canvasEl = canvasRef.current
-    const wrapper = document.getElementById("canvas-wrapper")
-    if (!canvasEl || !wrapper) return
-
-    const ratio = window.devicePixelRatio || 1
-    const { clientWidth, clientHeight } = wrapper
-    canvasEl.width = clientWidth * ratio
-    canvasEl.height = clientHeight * ratio
-    canvasEl.style.width = `${clientWidth}px`
-    canvasEl.style.height = `${clientHeight}px`
-
-    const canvas = fabricCanvasRef.current
-    if (canvas) {
-      canvas.setWidth(clientWidth)
-      canvas.setHeight(clientHeight)
-      canvas.setZoom(ratio)
-      canvas.renderAll()
-    }
-  }
-
-  useEffect(() => {
-    const canvasEl = canvasRef.current
-    if (!canvasEl) return
-
-    const canvas = new fabric.Canvas(canvasEl, {
-      isDrawingMode: false,
-      selection: true,
-    })
-    fabricCanvasRef.current = canvas
-
-    resizeCanvas()
-    window.addEventListener("resize", resizeCanvas)
+    canvas.on("mouse:move", deleteHandler)
+    canvas.on("object:added", saveHandler)
+    canvas.on("object:modified", saveHandler)
+    canvas.on("object:removed", saveHandler)
 
     return () => {
-      window.removeEventListener("resize", resizeCanvas)
-      canvas.dispose()
-      fabricCanvasRef.current = null
+      canvas.off("mouse:move", deleteHandler)
+      canvas.off("object:added", saveHandler)
+      canvas.off("object:modified", saveHandler)
+      canvas.off("object:removed", saveHandler)
     }
-  }, [])
+  }, [activeTool, roomId])
 
   const handleAddText = () => {
     const canvas = fabricCanvasRef.current
-    if (canvas) {
-      canvas.isDrawingMode = false
-      const text = new fabric.IText("텍스트", {
-        left: 100,
-        top: 100,
-        fontSize: 20,
-        fill: selectedColor,
-        editable: true,
-        selectable: true,
-      })
-      canvas.add(text)
-      canvas.setActiveObject(text)
-      canvas.renderAll()
-      setActiveTool("text")
-    }
+    if (!canvas) return
+    canvas.isDrawingMode = false
+    const text = new fabric.IText("텍스트", {
+      left: 100,
+      top: 100,
+      fontSize: 20,
+      fill: selectedColor,
+      editable: true,
+    })
+    canvas.add(text)
+    canvas.setActiveObject(text)
+    canvas.renderAll()
+    setActiveTool("text")
   }
 
   const handleDraw = () => {
     const canvas = fabricCanvasRef.current
-    if (canvas) {
-      const brush = new fabric.PencilBrush(canvas)
-      brush.color = selectedColor
-      brush.width = 2
-      canvas.freeDrawingBrush = brush
-      canvas.isDrawingMode = true
-      setActiveTool("draw")
-    }
+    if (!canvas) return
+    const brush = new fabric.PencilBrush(canvas)
+    brush.color = selectedColor
+    brush.width = 2
+    canvas.freeDrawingBrush = brush
+    canvas.isDrawingMode = true
+    setActiveTool("draw")
   }
 
   const handleDeleteObject = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
-
     canvas.isDrawingMode = false
     setActiveTool("delete")
   }
 
   const handleAddRect = () => {
     const canvas = fabricCanvasRef.current
-    if (canvas) {
-      canvas.isDrawingMode = false
-      const rect = new fabric.Rect({
-        left: 100,
-        top: 100,
-        fill: "lightblue",
-        width: 100,
-        height: 70,
-        selectable: true,
-      })
-      canvas.add(rect)
-      canvas.setActiveObject(rect)
-      canvas.renderAll()
-      setActiveTool("rect")
-    }
+    if (!canvas) return
+    canvas.isDrawingMode = false
+    const rect = new fabric.Rect({
+      left: 100,
+      top: 100,
+      width: 100,
+      height: 70,
+      fill: "lightblue",
+      selectable: true,
+    })
+    canvas.add(rect)
+    canvas.setActiveObject(rect)
+    canvas.renderAll()
+    setActiveTool("rect")
   }
 
   const handleAddCircle = () => {
     const canvas = fabricCanvasRef.current
-    if (canvas) {
-      canvas.isDrawingMode = false
-      const circle = new fabric.Circle({
-        left: 150,
-        top: 150,
-        radius: 40,
-        fill: "lightgreen",
-        selectable: true,
-      })
-      canvas.add(circle)
-      canvas.setActiveObject(circle)
-      canvas.renderAll()
-      setActiveTool("circle")
-    }
+    if (!canvas) return
+    canvas.isDrawingMode = false
+    const circle = new fabric.Circle({
+      left: 150,
+      top: 150,
+      radius: 40,
+      fill: "lightgreen",
+      selectable: true,
+    })
+    canvas.add(circle)
+    canvas.setActiveObject(circle)
+    canvas.renderAll()
+    setActiveTool("circle")
   }
 
   const handleAddTriangle = () => {
     const canvas = fabricCanvasRef.current
-    if (canvas) {
-      canvas.isDrawingMode = false
-      const triangle = new fabric.Triangle({
-        left: 200,
-        top: 200,
-        width: 80,
-        height: 80,
-        fill: "pink",
-        selectable: true,
-      })
-      canvas.add(triangle)
-      canvas.setActiveObject(triangle)
-      canvas.renderAll()
-      setActiveTool("triangle")
-    }
+    if (!canvas) return
+    canvas.isDrawingMode = false
+    const triangle = new fabric.Triangle({
+      left: 200,
+      top: 200,
+      width: 80,
+      height: 80,
+      fill: "pink",
+      selectable: true,
+    })
+    canvas.add(triangle)
+    canvas.setActiveObject(triangle)
+    canvas.renderAll()
+    setActiveTool("triangle")
   }
 
   const handleAddDiamond = () => {
     const canvas = fabricCanvasRef.current
-    if (canvas) {
-      canvas.isDrawingMode = false
-      const diamond = new fabric.Polygon(
-        [
-          { x: 0, y: -50 },
-          { x: 50, y: 0 },
-          { x: 0, y: 50 },
-          { x: -50, y: 0 },
-        ],
-        {
-          left: 250,
-          top: 250,
-          fill: "violet",
-          selectable: true,
-          originX: "center",
-          originY: "center",
-        },
-      )
-      canvas.add(diamond)
-      canvas.setActiveObject(diamond)
-      canvas.renderAll()
-      setActiveTool("diamond")
-    }
+    if (!canvas) return
+    canvas.isDrawingMode = false
+    const diamond = new fabric.Polygon(
+      [
+        { x: 0, y: -50 },
+        { x: 50, y: 0 },
+        { x: 0, y: 50 },
+        { x: -50, y: 0 },
+      ],
+      {
+        left: 250,
+        top: 250,
+        fill: "violet",
+        selectable: true,
+        originX: "center",
+        originY: "center",
+      },
+    )
+    canvas.add(diamond)
+    canvas.setActiveObject(diamond)
+    canvas.renderAll()
+    setActiveTool("diamond")
   }
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
