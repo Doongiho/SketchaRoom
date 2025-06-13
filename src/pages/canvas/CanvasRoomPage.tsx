@@ -9,6 +9,32 @@ const CanvasRoomPage = () => {
   const [activeTool, setActiveTool] = useState<string>("")
   const [selectedColor, setSelectedColor] = useState<string>("#000000")
 
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current
+    if (!canvas) return
+
+    const handler = (e: fabric.TPointerEventInfo<fabric.TPointerEvent>) => {
+      if (activeTool !== "delete") return
+
+      const pointer = e.absolutePointer ?? e.pointer
+      if (!pointer) return
+
+      const objects = canvas.getObjects()
+      for (const obj of objects) {
+        if (obj.containsPoint(pointer)) {
+          canvas.remove(obj)
+          canvas.renderAll()
+          break
+        }
+      }
+    }
+
+    canvas.on("mouse:move", handler)
+    return () => {
+      canvas.off("mouse:move", handler)
+    }
+  }, [activeTool])
+
   const resizeCanvas = () => {
     const canvasEl = canvasRef.current
     const wrapper = document.getElementById("canvas-wrapper")
@@ -85,26 +111,6 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
 
-    canvas.off("mouse:move")
-
-    const deleteHandler = (
-      e: fabric.TPointerEventInfo<fabric.TPointerEvent>,
-    ) => {
-      const pointer = e.absolutePointer ?? e.pointer
-      if (!pointer) return
-
-      const objects = canvas.getObjects()
-
-      for (const obj of objects) {
-        if (obj.containsPoint(pointer)) {
-          canvas.remove(obj)
-          canvas.renderAll()
-          break
-        }
-      }
-    }
-
-    canvas.on("mouse:move", deleteHandler)
     canvas.isDrawingMode = false
     setActiveTool("delete")
   }
