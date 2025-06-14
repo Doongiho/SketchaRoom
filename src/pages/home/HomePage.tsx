@@ -11,6 +11,8 @@ import { useRoomStore } from "../../stores/useRoomStore"
 import InviteModalContent from "../Modal/InviteModal"
 import RoomEditModal from "../Modal/RoomEditModal"
 import { useFriendRooms } from "../../hooks/useFriendRooms"
+import { deleteDoc, doc } from "firebase/firestore"
+import { db } from "../../libs/firebase"
 
 const HomePage = () => {
   const user = useAuth()
@@ -59,6 +61,21 @@ const HomePage = () => {
   const closeEditModal = () => {
     setIsEditModalOpen(false)
     setEditTargetRoom(null)
+  }
+
+  const handleLeaveFriendRoom = async (roomId: string) => {
+    if (!user?.uid) return
+
+    const confirmLeave = window.confirm("이 친구방에서 나가시겠습니까?")
+    if (!confirmLeave) return
+
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "friendRooms", roomId))
+      alert("친구방에서 나갔습니다.")
+      window.location.reload() // or refetch friendRooms if you prefer
+    } catch (err) {
+      alert("나가기 실패: " + (err as Error).message)
+    }
   }
 
   return (
@@ -138,11 +155,12 @@ const HomePage = () => {
             ) : friendRooms.length > 0 ? (
               <RoomList>
                 {friendRooms.map((room: Room) => (
-                  <RoomCard key={room.id} onClick={() => navigate(`/room/${room.id}`)}>
-                    <RoomInformation>
+                  <RoomCard key={room.id}>
+                    <RoomInformation onClick={() => navigate(`/room/${room.id}`)}>
                       <RoomName>{room.name}</RoomName>
                       <RoomDescription>{room.description}</RoomDescription>
                     </RoomInformation>
+                      <LeaveBtn onClick={() => handleLeaveFriendRoom(room.id)}>나가기</LeaveBtn>
                   </RoomCard>
                 ))}
               </RoomList>
@@ -392,5 +410,19 @@ const ModifyBtn = styled.button`
 
   &:hover {
     background-color: #1976d2;
+  }
+`
+const LeaveBtn = styled.button`
+  background-color: #f44336;
+  color: white;
+  border: none;
+  font-size: 0.95rem;
+  padding: 0.2rem 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: #d32f2f;
   }
 `
