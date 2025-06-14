@@ -84,7 +84,6 @@ const HomePage = () => {
         <Greeting>
           {user ? `${user.displayName}님 안녕하세요` : "로그인 해주세요"}
         </Greeting>
-        <UserIDText>{user?.uid && `UID: ${user.uid}`}</UserIDText>
         <MenuDiv onClick={toggleMenu}>
           <MenuButton>
             <Bar />
@@ -208,6 +207,7 @@ const Header = styled.header`
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   align-items: center;
+  justify-content: space-between;
 
   @media (min-width: 640px) {
     flex-direction: row;
@@ -219,12 +219,6 @@ const Header = styled.header`
 const Greeting = styled.h2`
   font-size: 1.5rem;
   font-weight: bold;
-`
-
-const UserIDText = styled.p`
-  font-size: 0.75rem;
-  color: #777;
-  margin-top: 0.25rem;
 `
 
 const MenuButton = styled.div`
@@ -351,7 +345,6 @@ const RoomCard = styled.div`
   }
 `
 const RoomInformation = styled.div`
-  width: 70%;
 `
 
 const RoomName = styled.h4`
@@ -381,7 +374,7 @@ const RoomDescription = styled.p`
 const ButtonGnb = styled.div`
   display: flex;
   justify-content: space-between;
-  width: 25%;
+  gap:10px;
 `
 const InviteBtn = styled.button`
   background-color: #4caf50;
