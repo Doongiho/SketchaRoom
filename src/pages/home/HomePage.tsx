@@ -10,10 +10,12 @@ import type { Room } from "../../stores/useRoomStore"
 import { useRoomStore } from "../../stores/useRoomStore"
 import InviteModalContent from "../Modal/InviteModal"
 import RoomEditModal from "../Modal/RoomEditModal"
+import { useFriendRooms } from "../../hooks/useFriendRooms"
 
 const HomePage = () => {
   const user = useAuth()
   const navigate = useNavigate()
+  const { friendRooms, loading: friendLoading } = useFriendRooms(user?.uid)
   const { loading, error, refetch } = useMyRooms(user?.uid)
   const rooms = useRoomStore((state) => state.rooms)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -26,6 +28,7 @@ const HomePage = () => {
 
   const handleGoToProfile = () => navigate("/profile")
   const handleGoToCreateRoom = () => navigate("/createRoom")
+  const handleGoToEnterRoom = () => navigate("/enterRoom")
 
   const handleLogout = async () => {
     try {
@@ -78,7 +81,7 @@ const HomePage = () => {
                 <Whiteboard onClick={handleGoToCreateRoom}>
                   화이트보드 만들기
                 </Whiteboard>
-                <Enter>입장하기</Enter>
+                <Enter onClick={handleGoToEnterRoom}>입장하기</Enter>
                 <Logout onClick={handleLogout}>로그아웃</Logout>
               </MenuContnet>
             </MenuModal>
@@ -127,14 +130,25 @@ const HomePage = () => {
           </Box>
         </Section>
 
-        <Section>
+       <Section>
           <SectionTitle>친구방 리스트</SectionTitle>
           <Box>
-            <Message>
-              방이 없습니다
-              <br />
-              만들어보세요!
-            </Message>
+            {friendLoading ? (
+              <p>불러오는 중...</p>
+            ) : friendRooms.length > 0 ? (
+              <RoomList>
+                {friendRooms.map((room: Room) => (
+                  <RoomCard key={room.id} onClick={() => navigate(`/room/${room.id}`)}>
+                    <RoomInformation>
+                      <RoomName>{room.name}</RoomName>
+                      <RoomDescription>{room.description}</RoomDescription>
+                    </RoomInformation>
+                  </RoomCard>
+                ))}
+              </RoomList>
+            ) : (
+              <Message>친구방이 없습니다. 초대 링크로 추가해보세요!</Message>
+            )}
           </Box>
         </Section>
       </SectionWrapper>
