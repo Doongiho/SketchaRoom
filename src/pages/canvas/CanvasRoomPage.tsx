@@ -1,4 +1,14 @@
-import * as fabric from "fabric"
+import type { TPointerEvent, TPointerEventInfo } from "fabric"
+import {
+  Circle,
+  Canvas as FabricCanvas,
+  Image as FabricImage,
+  IText,
+  PencilBrush,
+  Polygon,
+  Rect,
+  Triangle,
+} from "fabric"
 import { useEffect, useRef, useState } from "react"
 import { useParams } from "react-router-dom"
 import styled from "styled-components"
@@ -8,7 +18,7 @@ import { loadCanvasState, saveCanvasState } from "../../stores/useCanvasStore"
 const CanvasRoomPage = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { roomId } = useParams<{ roomId: string }>()
-  const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
+  const fabricCanvasRef = useRef<FabricCanvas | null>(null)
   const [activeTool, setActiveTool] = useState("")
   const [selectedColor, setSelectedColor] = useState("#000000")
 
@@ -21,7 +31,7 @@ const CanvasRoomPage = () => {
       fabricCanvasRef.current = null
     }
 
-    const canvas = new fabric.Canvas(canvasEl, {
+    const canvas = new FabricCanvas(canvasEl, {
       isDrawingMode: false,
       selection: true,
     })
@@ -63,36 +73,41 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas || !roomId) return
 
-    const deleteHandler = (
-      e: fabric.TPointerEventInfo<fabric.TPointerEvent>,
-    ) => {
+    const deleteHandler = (e: TPointerEventInfo<TPointerEvent>) => {
       if (activeTool !== "delete") return
 
-      const pointer = e.absolutePointer ?? e.pointer
-      if (!pointer) return
-
+      const pointer = canvas.getPointer(e.e)
       const objects = canvas.getObjects()
-      for (const obj of objects) {
-        if (obj.containsPoint(pointer)) {
+
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i]
+        const bounds = obj.getBoundingRect()
+
+        if (
+          pointer.x >= bounds.left &&
+          pointer.x <= bounds.left + bounds.width &&
+          pointer.y >= bounds.top &&
+          pointer.y <= bounds.top + bounds.height
+        ) {
           canvas.remove(obj)
-          canvas.renderAll()
+          canvas.requestRenderAll()
           break
         }
       }
     }
 
     const saveHandler = () => {
-      console.log("캔버스 저장 호출됨")
+      if (!canvas || !roomId) return
       saveCanvasState(roomId, canvas)
     }
 
-    canvas.on("mouse:move", deleteHandler)
+    canvas.on("mouse:down", deleteHandler)
     canvas.on("object:added", saveHandler)
     canvas.on("object:modified", saveHandler)
     canvas.on("object:removed", saveHandler)
 
     return () => {
-      canvas.off("mouse:move", deleteHandler)
+      canvas.off("mouse:down", deleteHandler)
       canvas.off("object:added", saveHandler)
       canvas.off("object:modified", saveHandler)
       canvas.off("object:removed", saveHandler)
@@ -103,7 +118,7 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
     canvas.isDrawingMode = false
-    const text = new fabric.IText("텍스트", {
+    const text = new IText("텍스트", {
       left: 100,
       top: 100,
       fontSize: 20,
@@ -119,7 +134,7 @@ const CanvasRoomPage = () => {
   const handleDraw = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
-    const brush = new fabric.PencilBrush(canvas)
+    const brush = new PencilBrush(canvas)
     brush.color = selectedColor
     brush.width = 2
     canvas.freeDrawingBrush = brush
@@ -138,7 +153,7 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
     canvas.isDrawingMode = false
-    const rect = new fabric.Rect({
+    const rect = new Rect({
       left: 100,
       top: 100,
       width: 100,
@@ -156,7 +171,7 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
     canvas.isDrawingMode = false
-    const circle = new fabric.Circle({
+    const circle = new Circle({
       left: 150,
       top: 150,
       radius: 40,
@@ -173,7 +188,7 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
     canvas.isDrawingMode = false
-    const triangle = new fabric.Triangle({
+    const triangle = new Triangle({
       left: 200,
       top: 200,
       width: 80,
@@ -191,7 +206,7 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
     canvas.isDrawingMode = false
-    const diamond = new fabric.Polygon(
+    const diamond = new Polygon(
       [
         { x: 0, y: -50 },
         { x: 50, y: 0 },
@@ -241,7 +256,7 @@ const CanvasRoomPage = () => {
       const dataUrl = event.target?.result as string
       const img = new Image()
       img.onload = () => {
-        const fabricImg = new fabric.Image(img, {
+        const fabricImg = new FabricImage(img, {
           left: 100,
           top: 100,
           scaleX: 0.3,
@@ -289,7 +304,7 @@ const CanvasRoomPage = () => {
           </ToolRow>
         </Section>
         <Section>
-          <Title>도형</Title>
+          <Title> 도형 </Title>
           <ToolRow>
             <Button
               onClick={handleAddRect}

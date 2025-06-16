@@ -6,6 +6,7 @@
   ],
   "compilerOptions": {
     "esModuleInterop": true,
+    "types": ["fabric"],
     "allowSyntheticDefaultImports": true
   }
 }
