@@ -14,15 +14,31 @@ wss.on("connection", (ws, req) => {
   ws.on("message", (message) => {
     try {
       const parsed = JSON.parse(message)
-      const { type, roomId, payload } = parsed
+      const { type, roomId, payload, name } = parsed
 
       if (type === "join-room") {
         currentRoom = roomId
         if (!rooms[currentRoom]) {
           rooms[currentRoom] = new Set()
         }
+        ws.username = name
         rooms[currentRoom].add(ws)
         console.log(`🟢 client joined room ${currentRoom}`)
+
+        const names = Array.from(rooms[currentRoom]).map(
+          (client) => client.username,
+        )
+        rooms[currentRoom].forEach((client) => {
+          if (client.readyState === ws.OPEN) {
+            client.send(
+              JSON.stringify({
+                type: "user-list",
+                roomId,
+                payload: names,
+              }),
+            )
+          }
+        })
         return
       }
 
