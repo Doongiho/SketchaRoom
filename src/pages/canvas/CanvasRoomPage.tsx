@@ -21,6 +21,36 @@ const CanvasRoomPage = () => {
   const fabricCanvasRef = useRef<FabricCanvas | null>(null)
   const [activeTool, setActiveTool] = useState("")
   const [selectedColor, setSelectedColor] = useState("#000000")
+  const socketRef = useRef<WebSocket | null>(null)
+
+  useEffect(() => {
+    if (!roomId) return
+
+    const socket = new WebSocket("ws://localhost:8080")
+    socketRef.current = socket
+
+    socket.onopen = () => {
+      console.log("✅ WebSocket 연결됨")
+      socket.send(JSON.stringify({ type: "join-room", roomId }))
+    }
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      console.log("💬 수신 메시지:", data)
+    }
+
+    socket.onclose = () => {
+      console.log("❌ WebSocket 연결 종료")
+    }
+
+    socket.onerror = (err) => {
+      console.error("🚨 WebSocket 에러", err)
+    }
+
+    return () => {
+      socket.close()
+    }
+  }, [roomId])
 
   useEffect(() => {
     const canvasEl = canvasRef.current
