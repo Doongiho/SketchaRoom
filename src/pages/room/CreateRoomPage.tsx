@@ -39,9 +39,10 @@ const CreateRoomPage = () => {
       description,
       ownerId: user.uid,
       ownerName: user.displayName ?? "익명",
+      createdBy: user.uid, 
+      createdByName: user.displayName ?? "익명",
       createdAt: serverTimestamp(),
     })
-
 
     setRoomId(id)
     setCreated(true)
