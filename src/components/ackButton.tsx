@@ -13,7 +13,7 @@ const BackButton = ({ to }: BackButtonProps) => {
     if (to) {
       navigate(to)
     } else {
-      navigate(-1)
+      navigate("/homepage")
     }
   }
 

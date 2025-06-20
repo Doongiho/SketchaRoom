@@ -3,6 +3,7 @@ import styled from "styled-components"
 import { useNavigate } from "react-router-dom"
 import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { auth, db } from "../../libs/firebase"
+import BackButton from "../../components/ackButton"
 
 const EnterRoomPage = () => {
   const [roomInput, setRoomInput] = useState("")
@@ -46,6 +47,7 @@ const EnterRoomPage = () => {
 
   return (
     <Wrapper>
+      <BackButton />
       <Title>방 입장하기</Title>
       <Input
         type="text"
