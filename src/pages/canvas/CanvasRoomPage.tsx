@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react"
 import { useParams } from "react-router-dom"
 import styled from "styled-components"
 import BackButton from "../../components/ackButton"
+import { auth } from "../../libs/firebase"
 import { loadCanvasState, saveCanvasState } from "../../stores/useCanvasStore"
 
 const CanvasRoomPage = () => {
@@ -21,6 +22,47 @@ const CanvasRoomPage = () => {
   const fabricCanvasRef = useRef<FabricCanvas | null>(null)
   const [activeTool, setActiveTool] = useState("")
   const [selectedColor, setSelectedColor] = useState("#000000")
+  const socketRef = useRef<WebSocket | null>(null)
+  const [userList, setUserList] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!roomId) return
+
+    const socket = new WebSocket("ws://localhost:8080")
+    socketRef.current = socket
+
+    socket.onopen = () => {
+      console.log("✅ WebSocket 연결됨")
+      socket.send(
+        JSON.stringify({
+          type: "join-room",
+          roomId,
+          name: getDisplayName(),
+        }),
+      )
+    }
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      console.log("💬 수신 메시지:", data)
+      if (data.type === "user-list") {
+        const names = data.payload as string[]
+        setUserList(names)
+      }
+    }
+
+    socket.onclose = () => {
+      console.log("❌ WebSocket 연결 종료")
+    }
+
+    socket.onerror = (err) => {
+      console.error("🚨 WebSocket 에러", err)
+    }
+
+    return () => {
+      socket.close()
+    }
+  }, [roomId])
 
   useEffect(() => {
     const canvasEl = canvasRef.current
@@ -274,6 +316,19 @@ const CanvasRoomPage = () => {
     e.target.value = ""
   }
 
+  function getDisplayName(): string {
+    const user = auth.currentUser
+    if (user?.displayName) return user.displayName
+
+    const storedName = sessionStorage.getItem("guestName")
+    if (storedName) return storedName
+
+    const randomNum = Math.floor(Math.random() * 1000)
+    const name = `유저 ${randomNum}`
+    sessionStorage.setItem("guestName", name)
+    return name
+  }
+
   return (
     <Wrapper>
       <CanvasWrapper id="canvas-wrapper">
@@ -357,6 +412,14 @@ const CanvasRoomPage = () => {
             onChange={handleAddImage}
             style={{ display: "none" }}
           />
+        </Section>
+        <Section>
+          <Title>참여 유저</Title>
+          <JoinUser>
+            {userList.map((name, idx) => (
+              <JoinUserList key={idx}>{name}</JoinUserList>
+            ))}
+          </JoinUser>
         </Section>
       </Toolbar>
       <BackDiv>
@@ -488,4 +551,9 @@ const ColorPicker = styled.input`
     border: none;
     border-radius: 50%;
   }
+`
+
+const JoinUser = styled.div``
+const JoinUserList = styled.li`
+  list-style-type: none;
 `
