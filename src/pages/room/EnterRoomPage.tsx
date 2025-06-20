@@ -1,53 +1,60 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
-import BackButton from "../../components/ackButton"
+import { useNavigate } from "react-router-dom"
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"
+import { auth, db } from "../../libs/firebase"
 
 const EnterRoomPage = () => {
-  const [input, setInput] = useState("")
+  const [roomInput, setRoomInput] = useState("")
   const [error, setError] = useState("")
   const navigate = useNavigate()
 
-  const handleEnterRoom = () => {
-    if (!input.trim()) {
-      setError("Room ID 또는 링크를 입력해주세요.")
+  const handleEnter = async () => {
+    if (!roomInput.trim()) {
+      setError("Room ID를 입력해주세요.")
       return
     }
 
     try {
-      const roomId = input.includes("room/")
-        ? input.split("room/")[1].split(/[/?#]/)[0]
-        : input
+      const roomId = roomInput.includes("room/")
+        ? roomInput.split("room/")[1].split(/[/?#]/)[0]
+        : roomInput
 
       if (!roomId || roomId.trim() === "") {
         setError("올바른 Room ID를 입력해주세요.")
         return
       }
 
+      const uid = auth.currentUser?.uid
+      if (uid) {
+        await setDoc(
+          doc(db, `users/${uid}/joinedRooms/${roomId}`),
+          {
+            roomId,
+            joinedAt: serverTimestamp(),
+          },
+          { merge: true }
+        )
+      }
+
       navigate(`/room/${roomId}`)
-    } catch {
-      setError("입력값이 올바르지 않습니다.")
+    } catch (e) {
+      console.error("입장 실패:", e)
+      setError("입장 중 오류가 발생했습니다.")
     }
   }
 
   return (
     <Wrapper>
-      <BackButton />
       <Title>방 입장하기</Title>
-
       <Input
         type="text"
-        value={input}
-        onChange={(e) => {
-          setInput(e.target.value)
-          setError("")
-        }}
-        placeholder="Room ID 또는 링크를 입력하세요"
+        value={roomInput}
+        onChange={(e) => setRoomInput(e.target.value)}
+        placeholder="room/abc123 또는 abc123"
       />
-
       {error && <ErrorText>{error}</ErrorText>}
-
-      <Button onClick={handleEnterRoom}>입장하기</Button>
+      <Button onClick={handleEnter}>입장</Button>
     </Wrapper>
   )
 }
@@ -61,21 +68,21 @@ const Wrapper = styled.div`
   border-radius: 12px;
   background-color: #fff;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 `
 
-const Title = styled.h2`
-  font-size: 1.8rem;
+const Title = styled.h3`
   text-align: center;
-  margin-bottom: 2rem;
+  font-size: 1.3rem;
 `
 
 const Input = styled.input`
-  width: 100%;
-  padding: 12px;
+  padding: 10px;
   font-size: 1rem;
-  border-radius: 8px;
   border: 1px solid #ccc;
-  margin-bottom: 1rem;
+  border-radius: 6px;
 `
 
 const Button = styled.button`
@@ -98,9 +105,9 @@ const Button = styled.button`
   }
 `
 
+
 const ErrorText = styled.p`
   color: red;
   font-size: 0.9rem;
   text-align: center;
-  margin-top: -0.5rem;
-`
+  `
