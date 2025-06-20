@@ -10,6 +10,8 @@ import type { Room } from "../../stores/useRoomStore"
 import { useRoomStore } from "../../stores/useRoomStore"
 import InviteModalContent from "../Modal/InviteModal"
 import RoomEditModal from "../Modal/RoomEditModal"
+import type { FriendRoom } from "../../hooks/useFriendRooms"
+import { useFriendRooms } from "../../hooks/useFriendRooms"
 
 const HomePage = () => {
   const user = useAuth()
@@ -21,6 +23,7 @@ const HomePage = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editTargetRoom, setEditTargetRoom] = useState<Room | null>(null)
+  const { rooms: friendRooms, loading: friendLoading, error: friendError } = useFriendRooms()
 
   const toggleMenu = () => setIsMenuOpen((prev) => !prev)
 
@@ -131,11 +134,28 @@ const HomePage = () => {
         <Section>
           <SectionTitle>친구방 리스트</SectionTitle>
           <Box>
-            <Message>
-              방이 없습니다
-              <br />
-              만들어보세요!
-            </Message>
+            {friendLoading ? (
+              <p>불러오는 중...</p>
+            ) : friendError ? (
+              <p>에러 발생: {friendError.message}</p>
+            ) : friendRooms.length > 0 ? (
+              <RoomList>
+                {friendRooms.map((room: FriendRoom) => (
+                  <RoomCard key={room.roomId}>
+                    <RoomInformation onClick={() => navigate(`/room/${room.roomId}`)}>
+                      <RoomName>{room.roomId}</RoomName>
+                      <RoomDescription>참여한 방입니다</RoomDescription>
+                    </RoomInformation>
+                  </RoomCard>
+                ))}
+              </RoomList>
+            ) : (
+              <Message>
+                친구방이 없습니다
+                <br />
+                입장 후 자동 등록됩니다!
+              </Message>
+            )}
           </Box>
         </Section>
       </SectionWrapper>
