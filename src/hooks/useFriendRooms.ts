@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { collection, getDocs, doc, getDoc } from "firebase/firestore"
-import { auth, db } from "../libs/firebase"
+import { collection, getDocs, doc, getDoc,deleteDoc } from "firebase/firestore"
+import { auth, db, } from "../libs/firebase"
 import { onAuthStateChanged } from "firebase/auth"
 
 export interface FriendRoom {
@@ -55,4 +55,13 @@ export const useFriendRooms = () => {
   }, [])
 
   return { rooms, loading, error }
+}
+
+export const leaveFriendRoom = async (roomId: string) => {
+  const uid = auth.currentUser?.uid
+  if (!uid) {
+    throw new Error("로그인이 필요합니다.")
+  }
+
+  await deleteDoc(doc(db, `users/${uid}/joinedRooms/${roomId}`))
 }

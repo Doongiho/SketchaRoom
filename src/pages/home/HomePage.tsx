@@ -12,6 +12,7 @@ import InviteModalContent from "../Modal/InviteModal"
 import RoomEditModal from "../Modal/RoomEditModal"
 import type { FriendRoom } from "../../hooks/useFriendRooms"
 import { useFriendRooms } from "../../hooks/useFriendRooms"
+import { leaveFriendRoom } from "../../hooks/useFriendRooms"
 
 const HomePage = () => {
   const user = useAuth()
@@ -60,6 +61,20 @@ const HomePage = () => {
   const closeEditModal = () => {
     setIsEditModalOpen(false)
     setEditTargetRoom(null)
+  }
+    
+  const handleLeaveRoom = async (roomId: string) => {
+    const confirmLeave = window.confirm("정말로 이 방에서 나가시겠습니까?")
+    if (!confirmLeave) return
+
+    try {
+      await leaveFriendRoom(roomId)
+      alert("방에서 나갔습니다.")
+      window.location.reload()
+    } catch (err) {
+      console.error("나가기 실패:", err)
+      alert("방 나가기 중 오류가 발생했습니다.")
+    }
   }
   
   return (
@@ -145,6 +160,9 @@ const HomePage = () => {
                         <RoomName>{room.name}</RoomName>
                         <RoomDescription>{room.ownerName} 님의 방</RoomDescription>
                       </RoomInformation>
+                      <ButtonGnb>
+                        <LeaveBtn onClick={() => handleLeaveRoom(room.roomId)}>나가기</LeaveBtn>
+                      </ButtonGnb>
                     </RoomCard>
                   ))}
                 </RoomList>
@@ -391,5 +409,19 @@ const ModifyBtn = styled.button`
 
   &:hover {
     background-color: #1976d2;
+  }
+`
+const LeaveBtn = styled.button`
+  background-color: #ff4d4f;
+  color: white;
+  border: none;
+  font-size: 0.95rem;
+  padding: 0.2rem 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: #d9363e;
   }
 `
