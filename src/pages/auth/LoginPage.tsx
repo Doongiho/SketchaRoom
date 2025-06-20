@@ -71,7 +71,7 @@ const LoginPage = () => {
         { merge: true },
       )
 
-      navigate("/")
+      navigate("/homepage") 
     } catch (err) {
       if (err instanceof FirebaseError) {
         const message = firebaseErrorMessages[err.code] || err.message
