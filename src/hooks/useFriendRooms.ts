@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react"
-import { collection, getDocs, getDoc, doc } from "firebase/firestore"
+import { collection, getDocs, doc, getDoc } from "firebase/firestore"
 import { auth, db } from "../libs/firebase"
+import { onAuthStateChanged } from "firebase/auth"
 
 export interface FriendRoom {
   roomId: string
   joinedAt: Date
-  name: string
-  ownerName: string
+  name?: string
+  ownerName?: string
 }
 
 export const useFriendRooms = () => {
@@ -15,13 +16,15 @@ export const useFriendRooms = () => {
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    const fetchFriendRooms = async () => {
-      setLoading(true)
-      try {
-        const uid = auth.currentUser?.uid
-        if (!uid) throw new Error("User not authenticated")
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setError(new Error("User not authenticated"))
+        setLoading(false)
+        return
+      }
 
-        const snapshot = await getDocs(collection(db, `users/${uid}/joinedRooms`))
+      try {
+        const snapshot = await getDocs(collection(db, `users/${user.uid}/joinedRooms`))
 
         const roomPromises = snapshot.docs.map(async (docSnap) => {
           const roomId = docSnap.id
@@ -29,7 +32,6 @@ export const useFriendRooms = () => {
 
           const roomRef = doc(db, "rooms", roomId)
           const roomDoc = await getDoc(roomRef)
-
           const roomData = roomDoc.exists() ? roomDoc.data() : null
 
           return {
@@ -47,9 +49,9 @@ export const useFriendRooms = () => {
       } finally {
         setLoading(false)
       }
-    }
+    })
 
-    fetchFriendRooms()
+    return () => unsubscribe()
   }, [])
 
   return { rooms, loading, error }
