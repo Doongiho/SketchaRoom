@@ -117,22 +117,16 @@ const HomePage = () => {
             ) : rooms.length > 0 ? (
               <RoomList>
                 {rooms.map((room) => (
-                  <RoomCard key={room.id}>
-                    <RoomInformation
-                      onClick={() => navigate(`/room/${room.id}`)}
-                    >
-                      <RoomName>{room.name}</RoomName>
-                      <RoomDescription>{room.description}</RoomDescription>
-                    </RoomInformation>
-                    <ButtonGnb>
-                      <InviteBtn onClick={() => handleInviteClick(room)}>
-                        초대
-                      </InviteBtn>
-                      <ModifyBtn onClick={() => handleModifyClick(room)}>
-                        수정
-                      </ModifyBtn>
-                    </ButtonGnb>
-                  </RoomCard>
+                 <RoomCard key={room.id} onClick={() => navigate(`/room/${room.id}`)}>
+                  <RoomInformation>
+                    <RoomName>{room.name}</RoomName>
+                    <RoomDescription>{room.description}</RoomDescription>
+                  </RoomInformation>
+                  <ButtonGnb onClick={(e) => e.stopPropagation()}>
+                    <InviteBtn onClick={() => handleInviteClick(room)}>초대</InviteBtn>
+                    <ModifyBtn onClick={() => handleModifyClick(room)}>수정</ModifyBtn>
+                  </ButtonGnb>
+                </RoomCard>
                 ))}
               </RoomList>
             ) : (
@@ -155,12 +149,12 @@ const HomePage = () => {
               ) : friendRooms.length > 0 ? (
                 <RoomList>
                   {friendRooms.map((room: FriendRoom) => (
-                    <RoomCard key={room.roomId}>
-                      <RoomInformation onClick={() => navigate(`/room/${room.roomId}`)}>
+                    <RoomCard key={room.roomId} onClick={() => navigate(`/room/${room.roomId}`)}>
+                      <RoomInformation>
                         <RoomName>{room.name}</RoomName>
                         <RoomDescription>{room.ownerName} 님의 방</RoomDescription>
                       </RoomInformation>
-                      <ButtonGnb>
+                      <ButtonGnb onClick={(e) => e.stopPropagation()}>
                         <LeaveBtn onClick={() => handleLeaveRoom(room.roomId)}>나가기</LeaveBtn>
                       </ButtonGnb>
                     </RoomCard>
