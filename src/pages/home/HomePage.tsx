@@ -68,7 +68,6 @@ const HomePage = () => {
         <Greeting>
           {user ? `${user.displayName}님 안녕하세요` : "로그인 해주세요"}
         </Greeting>
-        <UserIDText>{user?.uid && `UID: ${user.uid}`}</UserIDText>
         <MenuDiv onClick={toggleMenu}>
           <MenuButton>
             <Bar />
@@ -133,27 +132,25 @@ const HomePage = () => {
 
         <Section>
           <SectionTitle>친구방 리스트</SectionTitle>
-          <Box>
-            {friendLoading ? (
-              <p>불러오는 중...</p>
-            ) : friendError ? (
-              <p>에러 발생: {friendError.message}</p>
-            ) : friendRooms.length > 0 ? (
-              <RoomList>
-                {friendRooms.map((room: FriendRoom) => (
-                  <RoomCard key={room.roomId}>
-                    <RoomInformation onClick={() => navigate(`/room/${room.roomId}`)}>
-                      <RoomName>{room.roomId}</RoomName>
-                      <RoomDescription>참여한 방입니다</RoomDescription>
-                    </RoomInformation>
-                  </RoomCard>
-                ))}
-              </RoomList>
-            ) : (
-              <Message>
+            <Box>
+              {friendLoading ? (
+                <p>불러오는 중...</p>
+              ) : friendError ? (
+                <p>에러 발생: {friendError.message}</p>
+              ) : friendRooms.length > 0 ? (
+                <RoomList>
+                  {friendRooms.map((room: FriendRoom) => (
+                    <RoomCard key={room.roomId}>
+                      <RoomInformation onClick={() => navigate(`/room/${room.roomId}`)}>
+                        <RoomName>{room.name}</RoomName>
+                        <RoomDescription>{room.ownerName} 님의 방</RoomDescription>
+                      </RoomInformation>
+                    </RoomCard>
+                  ))}
+                </RoomList>
+              ) : (
+                <Message>
                 친구방이 없습니다
-                <br />
-                입장 후 자동 등록됩니다!
               </Message>
             )}
           </Box>
@@ -197,6 +194,7 @@ const Header = styled.header`
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   align-items: center;
+  justify-content: space-between;
 
   @media (min-width: 640px) {
     flex-direction: row;
@@ -210,11 +208,6 @@ const Greeting = styled.h2`
   font-weight: bold;
 `
 
-const UserIDText = styled.p`
-  font-size: 0.75rem;
-  color: #777;
-  margin-top: 0.25rem;
-`
 
 const MenuButton = styled.div`
   cursor: pointer;
@@ -340,7 +333,6 @@ const RoomCard = styled.div`
   }
 `
 const RoomInformation = styled.div`
-  width: 70%;
 `
 
 const RoomName = styled.h4`
@@ -370,7 +362,7 @@ const RoomDescription = styled.p`
 const ButtonGnb = styled.div`
   display: flex;
   justify-content: space-between;
-  width: 25%;
+  gap:10px
 `
 const InviteBtn = styled.button`
   background-color: #4caf50;

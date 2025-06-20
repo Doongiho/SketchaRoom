@@ -27,12 +27,21 @@ const CreateRoomPage = () => {
     }
 
     const id = uuidv4()
+    const user = auth.currentUser
+    if (!user) {
+      alert("로그인이 필요합니다.")
+      return
+    }
+
     await setDoc(doc(db, "rooms", id), {
+      id,
       name: roomName,
-      description: description,
+      description,
+      ownerId: user.uid,
+      ownerName: user.displayName ?? "익명",
       createdAt: serverTimestamp(),
-      createdBy: uid,
     })
+
 
     setRoomId(id)
     setCreated(true)
