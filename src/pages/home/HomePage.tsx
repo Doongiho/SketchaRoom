@@ -26,6 +26,7 @@ const HomePage = () => {
 
   const handleGoToProfile = () => navigate("/profile")
   const handleGoToCreateRoom = () => navigate("/createRoom")
+  const handleEnterRoom = () => navigate("/enterRoomPage")
 
   const handleLogout = async () => {
     try {
@@ -57,7 +58,7 @@ const HomePage = () => {
     setIsEditModalOpen(false)
     setEditTargetRoom(null)
   }
-
+  
   return (
     <Container>
       <Header>
@@ -78,7 +79,7 @@ const HomePage = () => {
                 <Whiteboard onClick={handleGoToCreateRoom}>
                   화이트보드 만들기
                 </Whiteboard>
-                <Enter>입장하기</Enter>
+                <Enter onClick={handleEnterRoom}>입장하기</Enter>
                 <Logout onClick={handleLogout}>로그아웃</Logout>
               </MenuContnet>
             </MenuModal>

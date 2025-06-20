@@ -7,6 +7,7 @@ import CanvasRoomPage from "../pages/canvas/CanvasRoomPage"
 import HistoryPage from "../pages/history/HistoryPage"
 import HomePage from "../pages/home/HomePage"
 import NotFoundPage from "../pages/notfound/NotFoundPage"
+import EnterRoomPage from "../pages/room/EnterRoomPage"
 import CreateRoomPage from "../pages/room/CreateRoomPage"
 
 const AppRouter = () => {
@@ -18,6 +19,7 @@ const AppRouter = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/enterRoomPage" element={<EnterRoomPage />} />
         <Route path="/createRoom" element={<CreateRoomPage />} />
         <Route path="/room/:roomId" element={<CanvasRoomPage />} />
         <Route path="/history" element={<HistoryPage />} />

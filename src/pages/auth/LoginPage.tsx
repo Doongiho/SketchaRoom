@@ -42,7 +42,7 @@ const LoginPage = () => {
 
     try {
       await loginWithEmail(form.email, form.password)
-      navigate("/")
+      navigate("/homepage")
     } catch (err) {
       if (err instanceof FirebaseError) {
         const message = firebaseErrorMessages[err.code] || err.message
