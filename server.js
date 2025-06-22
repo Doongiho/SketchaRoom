@@ -1,9 +1,14 @@
 import http from "http"
 import { WebSocketServer } from "ws"
 
-const PORT = 8080
+const PORT = process.env.PORT || 8080
 
-const server = http.createServer()
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" })
+  res.end("🟢 WebSocket Server is alive")
+})
+
+
 const wss = new WebSocketServer({ server })
 
 let rooms = {}
@@ -65,6 +70,6 @@ wss.on("connection", (ws, req) => {
   })
 })
 
-server.listen(PORT, () => {
-  console.log(`✅ WebSocket Server running on ws://localhost:${PORT}`)
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ WebSocket Server running on ws://0.0.0.0:${PORT}`)
 })
