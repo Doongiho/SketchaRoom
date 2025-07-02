@@ -98,7 +98,6 @@ const ProfilePage = () => {
         )
         await reauthenticateWithCredential(currentUser, credential)
         await updatePassword(currentUser, form.password)
-        console.log("비밀번호 변경 성공")
       }
 
       const ref = doc(db, "users", currentUser.uid)
@@ -106,7 +105,6 @@ const ProfilePage = () => {
         displayName: form.displayName,
         email: form.email,
       })
-      console.log("프로필 정보 업데이트 성공")
 
       setUser({ ...form, password: "", currentPassword: "" })
       setIsEditing(false)

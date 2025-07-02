@@ -8,7 +8,6 @@ const server = http.createServer((req, res) => {
   res.end("🟢 WebSocket Server is alive")
 })
 
-
 const wss = new WebSocketServer({ server })
 
 let rooms = {}
@@ -28,7 +27,6 @@ wss.on("connection", (ws, req) => {
         }
         ws.username = name
         rooms[currentRoom].add(ws)
-        console.log(`🟢 client joined room ${currentRoom}`)
 
         const names = Array.from(rooms[currentRoom]).map(
           (client) => client.username,
@@ -66,10 +64,7 @@ wss.on("connection", (ws, req) => {
         delete rooms[currentRoom]
       }
     }
-    console.log(`🔴 client left room ${currentRoom}`)
   })
 })
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ WebSocket Server running on ws://0.0.0.0:${PORT}`)
-})
+server.listen(PORT, "0.0.0.0", () => {})

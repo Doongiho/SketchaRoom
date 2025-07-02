@@ -106,11 +106,10 @@ const CanvasRoomPage = () => {
       FabricImageTyped.fromObjectRegistered = true
     }
 
-    const socket = new WebSocket("wss://sketcharoom.onrender.com");
+    const socket = new WebSocket("wss://sketcharoom.onrender.com")
     socketRef.current = socket
 
     socket.onopen = () => {
-      console.log("✅ WebSocket 연결됨")
       socket.send(
         JSON.stringify({
           type: "join-room",
@@ -128,7 +127,6 @@ const CanvasRoomPage = () => {
 
     socket.onmessage = async (event) => {
       const data = JSON.parse(event.data)
-      console.log("💬 수신 메시지:", data)
 
       if (data.type === "user-list") {
         const names = data.payload as string[]
@@ -176,14 +174,11 @@ const CanvasRoomPage = () => {
 
           target.setCoords()
           canvas.renderAll()
-          console.log("위치 업데이트됨:", target)
         }
       }
     }
 
-    socket.onclose = () => {
-      console.log("WebSocket 연결 종료")
-    }
+    socket.onclose = () => {}
 
     socket.onerror = (err) => {
       console.error("WebSocket 에러", err)

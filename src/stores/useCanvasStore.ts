@@ -24,7 +24,6 @@ export const saveCanvasState = async (
     json: jsonString,
     updatedAt: serverTimestamp(),
   })
-  console.log("저장할 캔버스 JSON", rawJson)
 }
 
 export const loadCanvasState = async (
@@ -43,11 +42,8 @@ export const loadCanvasState = async (
   try {
     const parsedJson = JSON.parse(data.json)
 
-    console.log("복원 대상 JSON", parsedJson)
-
     canvas.loadFromJSON(parsedJson, () => {
       canvas.requestRenderAll()
-      console.log("캔버스 복원 및 렌더 완료")
     })
   } catch (e) {
     console.error("복원 실패:", e)
