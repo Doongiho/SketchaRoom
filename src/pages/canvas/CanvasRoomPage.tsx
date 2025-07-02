@@ -256,9 +256,6 @@ const CanvasRoomPage = () => {
     const deleteHandler = (e: TPointerEventInfo<TPointerEvent>) => {
       if (activeTool !== "delete") return
 
-      const canvas = fabricCanvasRef.current
-      if (!canvas) return
-
       const pointer = canvas.getPointer(e.e)
       const point = new Point(pointer.x, pointer.y)
 
@@ -306,13 +303,16 @@ const CanvasRoomPage = () => {
       }
     }
 
-    canvas.on("mouse:down", deleteHandler)
+    if (activeTool === "delete") {
+      canvas.on("mouse:move", deleteHandler)
+    }
+
     canvas.on("object:added", saveHandler)
     canvas.on("object:modified", saveHandler)
     canvas.on("object:removed", saveHandler)
 
     return () => {
-      canvas.off("mouse:down", deleteHandler)
+      canvas.off("mouse:move", deleteHandler)
       canvas.off("object:added", saveHandler)
       canvas.off("object:modified", saveHandler)
       canvas.off("object:removed", saveHandler)
@@ -353,10 +353,11 @@ const CanvasRoomPage = () => {
       }),
     )
   }
-
   const handleDraw = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
+
+    canvas.isDrawingMode = false
     const brush = new PencilBrush(canvas)
     brush.color = selectedColor
     brush.width = 2
