@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { auth } from "../libs/firebase"
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null | undefined>(undefined)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -18,7 +18,7 @@ export const useAuth = () => {
 }
 
 export const useAuthState = () => {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null | undefined>(undefined)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

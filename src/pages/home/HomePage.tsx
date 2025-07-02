@@ -1,18 +1,17 @@
 import { signOut } from "firebase/auth"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import styled from "styled-components"
 import Modal from "../../components/Modal"
 import useAuth from "../../hooks/useAuth"
+import type { FriendRoom } from "../../hooks/useFriendRooms"
+import { leaveFriendRoom, useFriendRooms } from "../../hooks/useFriendRooms"
 import { useMyRooms } from "../../hooks/useMyRooms"
 import { auth } from "../../libs/firebase"
 import type { Room } from "../../stores/useRoomStore"
 import { useRoomStore } from "../../stores/useRoomStore"
 import InviteModalContent from "../Modal/InviteModal"
 import RoomEditModal from "../Modal/RoomEditModal"
-import type { FriendRoom } from "../../hooks/useFriendRooms"
-import { useFriendRooms } from "../../hooks/useFriendRooms"
-import { leaveFriendRoom } from "../../hooks/useFriendRooms"
 
 const HomePage = () => {
   const user = useAuth()
@@ -24,7 +23,11 @@ const HomePage = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editTargetRoom, setEditTargetRoom] = useState<Room | null>(null)
-  const { rooms: friendRooms, loading: friendLoading, error: friendError } = useFriendRooms()
+  const {
+    rooms: friendRooms,
+    loading: friendLoading,
+    error: friendError,
+  } = useFriendRooms()
 
   const toggleMenu = () => setIsMenuOpen((prev) => !prev)
 
@@ -62,7 +65,7 @@ const HomePage = () => {
     setIsEditModalOpen(false)
     setEditTargetRoom(null)
   }
-    
+
   const handleLeaveRoom = async (roomId: string) => {
     const confirmLeave = window.confirm("정말로 이 방에서 나가시겠습니까?")
     if (!confirmLeave) return
@@ -76,7 +79,14 @@ const HomePage = () => {
       alert("방 나가기 중 오류가 발생했습니다.")
     }
   }
-  
+
+  useEffect(() => {
+    if (user === undefined) return
+    if (user === null) {
+      navigate("/login")
+    }
+  }, [user, navigate])
+
   return (
     <Container>
       <Header>
@@ -117,16 +127,23 @@ const HomePage = () => {
             ) : rooms.length > 0 ? (
               <RoomList>
                 {rooms.map((room) => (
-                 <RoomCard key={room.id} onClick={() => navigate(`/room/${room.id}`)}>
-                  <RoomInformation>
-                    <RoomName>{room.name}</RoomName>
-                    <RoomDescription>{room.description}</RoomDescription>
-                  </RoomInformation>
-                  <ButtonGnb onClick={(e) => e.stopPropagation()}>
-                    <InviteBtn onClick={() => handleInviteClick(room)}>초대</InviteBtn>
-                    <ModifyBtn onClick={() => handleModifyClick(room)}>수정</ModifyBtn>
-                  </ButtonGnb>
-                </RoomCard>
+                  <RoomCard
+                    key={room.id}
+                    onClick={() => navigate(`/room/${room.id}`)}
+                  >
+                    <RoomInformation>
+                      <RoomName>{room.name}</RoomName>
+                      <RoomDescription>{room.description}</RoomDescription>
+                    </RoomInformation>
+                    <ButtonGnb onClick={(e) => e.stopPropagation()}>
+                      <InviteBtn onClick={() => handleInviteClick(room)}>
+                        초대
+                      </InviteBtn>
+                      <ModifyBtn onClick={() => handleModifyClick(room)}>
+                        수정
+                      </ModifyBtn>
+                    </ButtonGnb>
+                  </RoomCard>
                 ))}
               </RoomList>
             ) : (
@@ -141,29 +158,34 @@ const HomePage = () => {
 
         <Section>
           <SectionTitle>친구방 리스트</SectionTitle>
-            <Box>
-              {friendLoading ? (
-                <p>불러오는 중...</p>
-              ) : friendError ? (
-                <p>에러 발생: {friendError.message}</p>
-              ) : friendRooms.length > 0 ? (
-                <RoomList>
-                  {friendRooms.map((room: FriendRoom) => (
-                    <RoomCard key={room.roomId} onClick={() => navigate(`/room/${room.roomId}`)}>
-                      <RoomInformation>
-                        <RoomName>{room.name}</RoomName>
-                        <RoomDescription>{room.ownerName} 님의 방</RoomDescription>
-                      </RoomInformation>
-                      <ButtonGnb onClick={(e) => e.stopPropagation()}>
-                        <LeaveBtn onClick={() => handleLeaveRoom(room.roomId)}>나가기</LeaveBtn>
-                      </ButtonGnb>
-                    </RoomCard>
-                  ))}
-                </RoomList>
-              ) : (
-                <Message>
-                친구방이 없습니다
-              </Message>
+          <Box>
+            {friendLoading ? (
+              <p>불러오는 중...</p>
+            ) : friendError ? (
+              <p>에러 발생: {friendError.message}</p>
+            ) : friendRooms.length > 0 ? (
+              <RoomList>
+                {friendRooms.map((room: FriendRoom) => (
+                  <RoomCard
+                    key={room.roomId}
+                    onClick={() => navigate(`/room/${room.roomId}`)}
+                  >
+                    <RoomInformation>
+                      <RoomName>{room.name}</RoomName>
+                      <RoomDescription>
+                        {room.ownerName} 님의 방
+                      </RoomDescription>
+                    </RoomInformation>
+                    <ButtonGnb onClick={(e) => e.stopPropagation()}>
+                      <LeaveBtn onClick={() => handleLeaveRoom(room.roomId)}>
+                        나가기
+                      </LeaveBtn>
+                    </ButtonGnb>
+                  </RoomCard>
+                ))}
+              </RoomList>
+            ) : (
+              <Message>친구방이 없습니다</Message>
             )}
           </Box>
         </Section>
@@ -219,7 +241,6 @@ const Greeting = styled.h2`
   font-size: 1.5rem;
   font-weight: bold;
 `
-
 
 const MenuButton = styled.div`
   cursor: pointer;
@@ -344,8 +365,7 @@ const RoomCard = styled.div`
     background-color: #f0f0f0;
   }
 `
-const RoomInformation = styled.div`
-`
+const RoomInformation = styled.div``
 
 const RoomName = styled.h4`
   margin: 0 0 0.5rem 0;
@@ -374,7 +394,7 @@ const RoomDescription = styled.p`
 const ButtonGnb = styled.div`
   display: flex;
   justify-content: space-between;
-  gap:10px
+  gap: 10px;
 `
 const InviteBtn = styled.button`
   background-color: #4caf50;
