@@ -62,6 +62,7 @@ const CanvasRoomPage = () => {
   const [selectedColor, setSelectedColor] = useState("#000000")
   const socketRef = useRef<WebSocket | null>(null)
   const [userList, setUserList] = useState<string[]>([])
+  const [toolbarOpen, setToolbarOpen] = useState(false)
 
   useEffect(() => {
     if (!roomId) return
@@ -608,12 +609,16 @@ const CanvasRoomPage = () => {
     return name
   }
 
+  const toggleToolbar = () => {
+    setToolbarOpen((prev) => !prev)
+  }
+
   return (
     <Wrapper>
       <CanvasWrapper id="canvas-wrapper">
         <Canvas id="canvas" ref={canvasRef} />
       </CanvasWrapper>
-      <Toolbar>
+      <Toolbar $mobileVisible={toolbarOpen}>
         <Section>
           <Title>그리기</Title>
           <ToolRow>
@@ -704,6 +709,9 @@ const CanvasRoomPage = () => {
       <BackDiv>
         <BackButton />
       </BackDiv>
+      <ToolbarToggleButton onClick={toggleToolbar}>
+        {toolbarOpen ? "도구 닫기" : "도구 열기"}
+      </ToolbarToggleButton>
     </Wrapper>
   )
 }
@@ -724,8 +732,26 @@ const CanvasWrapper = styled.div`
   background: #fff;
   position: relative;
 `
+const ToolbarToggleButton = styled.button`
+  display: none;
 
-const Toolbar = styled.div`
+  @media (max-width: 768px) {
+    display: block;
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 8px 16px;
+    background-color: #594100;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    z-index: 20;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+`
+
+const Toolbar = styled.div<{ $mobileVisible?: boolean }>`
   width: 180px;
   border-left: 1px solid #000;
   padding: 2rem;
@@ -748,6 +774,14 @@ const Toolbar = styled.div`
     left: 0;
     background: #f9f9f9;
     z-index: 10;
+
+    transform: translateY(
+      ${({ $mobileVisible }) => ($mobileVisible ? "0" : "100%")}
+    );
+    opacity: ${({ $mobileVisible }) => ($mobileVisible ? 1 : 0)};
+    pointer-events: ${({ $mobileVisible }) =>
+      $mobileVisible ? "auto" : "none"};
+    transition: transform 0.4s ease, opacity 0.4s ease;
   }
 `
 
