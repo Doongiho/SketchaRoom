@@ -1,12 +1,4 @@
-import type {
-  Object as FabricObject,
-  ImageProps,
-  ObjectEvents,
-  SerializedImageProps,
-  TOptions,
-  TPointerEvent,
-  TPointerEventInfo,
-} from "fabric"
+import type { TPointerEvent, TPointerEventInfo } from "fabric"
 import {
   Circle,
   Canvas as FabricCanvas,
@@ -18,34 +10,53 @@ import {
   Polygon,
   Rect,
   Triangle,
-  util,
 } from "fabric"
 import { useEffect, useRef, useState } from "react"
 import { useParams } from "react-router-dom"
-import styled from "styled-components"
 import { v4 as uuidv4 } from "uuid"
 import BackButton from "../../components/ackButton"
 import { auth } from "../../libs/firebase"
 import { loadCanvasState, saveCanvasState } from "../../stores/useCanvasStore"
 
-function extendToObjectWithId<T extends FabricObject>(klass: { prototype: T }) {
-  const originalToObject = klass.prototype.toObject
+import {
+  BackDiv,
+  Button,
+  CanvasEl,
+  CanvasWrapper,
+  ColorPicker,
+  GlobalStyle,
+  JoinUser,
+  JoinUserList,
+  Section,
+  Title,
+  Toolbar,
+  ToolbarToggleButton,
+  ToolRow,
+  Wrapper,
+} from "../../features/canvasStyles"
+import {
+  BASE_H,
+  BASE_W,
+  enlivenObjectsAsync,
+  ensureImageFromObjectOnce,
+  extendToObjectWithId,
+  fitToWindow,
+  isMobile,
+  isPortrait,
+  promptLandscapeOnce,
+} from "../../features/canvasUtils"
+import {
+  hasId,
+  type WithId,
+  type WsAddObjectMsg,
+  type WsDeleteObjectMsg,
+  type WsInbound,
+  type WsJoinMsg,
+  type WsUpdateObjectMsg,
+  type WsUpdatePayload,
+} from "../../types/canvas"
 
-  klass.prototype.toObject = function (
-    this: T,
-    propertiesToInclude?: (keyof T)[],
-  ): Record<string, unknown> {
-    const base = originalToObject.call(this, propertiesToInclude)
-    return {
-      ...base,
-      id: (this as unknown as { id?: string }).id,
-      ...(this instanceof FabricImage && typeof this.getSrc === "function"
-        ? { src: this.getSrc() }
-        : {}),
-    }
-  }
-}
-
+/* toObject에 id/src 포함 등록 */
 extendToObjectWithId(Path)
 extendToObjectWithId(Rect)
 extendToObjectWithId(Circle)
@@ -56,143 +67,107 @@ extendToObjectWithId(FabricImage)
 
 const CanvasRoomPage = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const { roomId } = useParams<{ roomId: string }>()
+  const { roomId = "" } = useParams<{ roomId?: string }>()
   const fabricCanvasRef = useRef<FabricCanvas | null>(null)
-  const [activeTool, setActiveTool] = useState("")
+  const [activeTool, setActiveTool] = useState<
+    | ""
+    | "text"
+    | "draw"
+    | "delete"
+    | "rect"
+    | "circle"
+    | "triangle"
+    | "diamond"
+    | "image"
+  >("")
   const [selectedColor, setSelectedColor] = useState("#000000")
   const socketRef = useRef<WebSocket | null>(null)
   const [userList, setUserList] = useState<string[]>([])
   const [toolbarOpen, setToolbarOpen] = useState(false)
 
+  /* WebSocket & FabricImage.fromObject 등록 */
   useEffect(() => {
     if (!roomId) return
 
-    const FabricImageTyped = FabricImage as unknown as {
-      fromObjectRegistered?: boolean
-      fromObject: <T extends TOptions<SerializedImageProps>>(
-        obj: T,
-      ) => Promise<
-        FabricImage<
-          Omit<T, "src" | "filters" | "resizeFilter" | "type" | "crossOrigin"> &
-            Partial<ImageProps>,
-          SerializedImageProps,
-          ObjectEvents
-        >
-      >
-    }
-
-    if (!FabricImageTyped.fromObjectRegistered) {
-      FabricImageTyped.fromObject = async <
-        T extends TOptions<SerializedImageProps>,
-      >(
-        obj: T,
-      ) => {
-        const src = (obj as { src?: string }).src
-        if (typeof src !== "string") {
-          throw new Error("'src' 필드가 없거나 문자열이 아닙니다.")
-        }
-
-        const img = document.createElement("img")
-        img.crossOrigin = "anonymous"
-        img.src = src
-
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve()
-          img.onerror = () => reject(new Error("이미지 로드 실패"))
-        })
-
-        return new FabricImage(img, obj as Partial<ImageProps>)
-      }
-
-      FabricImageTyped.fromObjectRegistered = true
-    }
+    ensureImageFromObjectOnce()
 
     const socket = new WebSocket("wss://sketcharoom.onrender.com")
     socketRef.current = socket
 
     socket.onopen = () => {
-      socket.send(
-        JSON.stringify({
-          type: "join-room",
-          roomId,
-          name: getDisplayName(),
-        }),
-      )
+      const join: WsJoinMsg = {
+        type: "join-room",
+        roomId,
+        name: getDisplayName(),
+      }
+      socket.send(JSON.stringify(join))
     }
 
-    const enlivenObjectsAsync = <T extends object>(
-      objects: T[],
-    ): Promise<FabricObject[]> => {
-      return util.enlivenObjects(objects)
-    }
-
-    socket.onmessage = async (event) => {
-      const data = JSON.parse(event.data)
+    socket.onmessage = async (event: MessageEvent<string>) => {
+      const data = JSON.parse(event.data) as WsInbound
 
       if (data.type === "user-list") {
-        const names = data.payload as string[]
-        setUserList(names)
+        setUserList(data.payload)
       }
 
       if (data.type === "add-object" && fabricCanvasRef.current) {
-        const canvas = fabricCanvasRef.current
-
-        try {
-          const objects = await enlivenObjectsAsync([data.payload])
-
-          for (const obj of objects) {
-            canvas.add(obj)
-          }
-
-          canvas.requestRenderAll()
-        } catch (error) {
-          console.error("enlivenObjects 복원 실패:", error)
-        }
+        const objs = await enlivenObjectsAsync([data.payload])
+        objs.forEach((o) => fabricCanvasRef.current!.add(o))
+        fabricCanvasRef.current!.requestRenderAll()
       }
+
       if (data.type === "delete-object" && fabricCanvasRef.current) {
         const canvas = fabricCanvasRef.current
-        const objects = canvas.getObjects()
-        const target = objects.find((obj) => obj.id === data.payload.id)
+        const target = canvas
+          .getObjects()
+          .find((o) => hasId(o) && o.id === data.payload.id)
         if (target) {
           canvas.remove(target)
           canvas.requestRenderAll()
         }
       }
+
       if (data.type === "update-object" && fabricCanvasRef.current) {
         const canvas = fabricCanvasRef.current
-        const objects = canvas.getObjects()
-        const target = objects.find((obj) => obj.id === data.payload.id)
-
-        if (target && "set" in target) {
+        const target = canvas
+          .getObjects()
+          .find((o) => hasId(o) && o.id === data.payload.id)
+        if (target) {
           const { left, top, angle, scaleX, scaleY, fill } = data.payload
-
           if (typeof left === "number") target.set("left", left)
           if (typeof top === "number") target.set("top", top)
           if (typeof angle === "number") target.set("angle", angle)
           if (typeof scaleX === "number") target.set("scaleX", scaleX)
           if (typeof scaleY === "number") target.set("scaleY", scaleY)
           if (typeof fill === "string") target.set("fill", fill)
-
           target.setCoords()
           canvas.renderAll()
         }
       }
     }
 
-    socket.onclose = () => {}
-
-    socket.onerror = (err) => {
-      console.error("WebSocket 에러", err)
+    socket.onerror = (ev) => {
+      const s = socketRef.current
+      const state = s ? s.readyState : WebSocket.CLOSED
+      console.error("[WS] error", { event: ev, readyState: state, url: s?.url })
     }
 
-    return () => {
-      socket.close()
+    socket.onclose = (ev) => {
+      console.warn("[WS] close", {
+        code: ev.code,
+        reason: ev.reason,
+        wasClean: ev.wasClean,
+      })
     }
+    return () => socket.close()
   }, [roomId])
 
+  /* 캔버스 초기화 + 반응형 fit */
   useEffect(() => {
     const canvasEl = canvasRef.current
-    if (!canvasEl) return
+    if (!canvasEl || !roomId) return
+
+    let disposed = false
 
     if (fabricCanvasRef.current) {
       fabricCanvasRef.current.dispose()
@@ -202,80 +177,84 @@ const CanvasRoomPage = () => {
     const canvas = new FabricCanvas(canvasEl, {
       isDrawingMode: false,
       selection: true,
+      width: BASE_W,
+      height: BASE_H,
+      enableRetinaScaling: false,
     })
     fabricCanvasRef.current = canvas
 
-    canvas.on("path:created", (e) => {
-      const path = e.path as Path & { id?: string }
-      path.id = uuidv4()
+    canvasEl.style.width = "100%"
+    canvasEl.style.height = "100%"
 
+    canvas.on("path:created", (e) => {
+      const path = e.path as WithId<Path>
+      path.id = uuidv4()
       socketRef.current?.send(
         JSON.stringify({
           type: "add-object",
-          roomId,
+          roomId, // roomId는 이제 항상 string
           payload: { ...path.toObject(), id: path.id },
-        }),
+        } satisfies WsAddObjectMsg),
       )
     })
 
-    const resizeCanvas = () => {
+    const fit = () => {
+      if (disposed) return
       const wrapper = document.getElementById("canvas-wrapper")
       if (!wrapper) return
 
-      const ratio = window.devicePixelRatio || 1
-      canvasEl.width = wrapper.clientWidth * ratio
-      canvasEl.height = wrapper.clientHeight * ratio
-      canvasEl.style.width = `${wrapper.clientWidth}px`
-      canvasEl.style.height = `${wrapper.clientHeight}px`
+      const viewW = wrapper.clientWidth
+      const viewH = wrapper.clientHeight
 
-      canvas.setWidth(wrapper.clientWidth)
-      canvas.setHeight(wrapper.clientHeight)
-      canvas.setZoom(ratio)
-      canvas.renderAll()
+      if (viewW <= 0 || viewH <= 0) return
+
+      const ctxs = canvas as unknown as {
+        contextContainer?: CanvasRenderingContext2D
+        contextTop?: CanvasRenderingContext2D
+      }
+      if (!ctxs.contextContainer /* || !ctxs.contextTop */) return
+
+      fitToWindow(canvas, wrapper)
     }
 
-    resizeCanvas()
-    window.addEventListener("resize", resizeCanvas)
+    fit()
+    window.addEventListener("resize", fit)
 
-    if (roomId) {
-      setTimeout(() => {
-        loadCanvasState(roomId, canvas)
-      }, 100)
-    }
+    const tid = window.setTimeout(() => {
+      if (!disposed) loadCanvasState(roomId, canvas)
+    }, 100)
 
     return () => {
-      window.removeEventListener("resize", resizeCanvas)
+      disposed = true
+      window.clearTimeout(tid)
+      window.removeEventListener("resize", fit)
       canvas.dispose()
       fabricCanvasRef.current = null
     }
   }, [roomId])
 
+  /* 저장/삭제/수정 동기화 */
   useEffect(() => {
     const canvas = fabricCanvasRef.current
     if (!canvas || !roomId) return
 
     const deleteHandler = (e: TPointerEventInfo<TPointerEvent>) => {
       if (activeTool !== "delete") return
-
       const pointer = canvas.getPointer(e.e)
-      const point = new Point(pointer.x, pointer.y)
-
+      const pt = new Point(pointer.x, pointer.y)
       const objects = canvas.getObjects()
       for (let i = objects.length - 1; i >= 0; i--) {
         const obj = objects[i]
-        if (obj.containsPoint(point)) {
+        if (obj.containsPoint(pt)) {
           canvas.remove(obj)
           canvas.requestRenderAll()
-
-          const objectId = (obj as { id?: string }).id
-          if (objectId && socketRef.current) {
-            socketRef.current.send(
-              JSON.stringify({
-                type: "delete-object",
-                roomId,
-                payload: { id: objectId },
-              }),
-            )
+          if (hasId(obj) && obj.id) {
+            const msg: WsDeleteObjectMsg = {
+              type: "delete-object",
+              roomId,
+              payload: { id: obj.id },
+            }
+            socketRef.current?.send(JSON.stringify(msg))
           }
           break
         }
@@ -284,30 +263,23 @@ const CanvasRoomPage = () => {
 
     const saveHandler = () => {
       if (!canvas || !roomId) return
-
       saveCanvasState(roomId, canvas)
-
       const activeObject = canvas.getActiveObject()
-      if (activeObject && "toObject" in activeObject && "id" in activeObject) {
-        const payload = {
-          ...activeObject.toObject(),
-          id: (activeObject as { id?: string }).id,
+      if (activeObject && hasId(activeObject) && activeObject.id) {
+        const payload: WsUpdatePayload = {
+          id: activeObject.id,
+          ...(activeObject.toObject() as Record<string, unknown>),
         }
-
-        socketRef.current?.send(
-          JSON.stringify({
-            type: "update-object",
-            roomId,
-            payload,
-          }),
-        )
+        const msg: WsUpdateObjectMsg = {
+          type: "update-object",
+          roomId,
+          payload,
+        }
+        socketRef.current?.send(JSON.stringify(msg))
       }
     }
 
-    if (activeTool === "delete") {
-      canvas.on("mouse:move", deleteHandler)
-    }
-
+    if (activeTool === "delete") canvas.on("mouse:move", deleteHandler)
     canvas.on("object:added", saveHandler)
     canvas.on("object:modified", saveHandler)
     canvas.on("object:removed", saveHandler)
@@ -320,48 +292,78 @@ const CanvasRoomPage = () => {
     }
   }, [activeTool, roomId])
 
+  /* 모바일 세로 → 가로 알림 */
+  useEffect(() => {
+    const check = () => {
+      if (!isMobile()) return
+      if (isPortrait()) promptLandscapeOnce()
+    }
+    check()
+
+    const onResize = () => check()
+    window.addEventListener("resize", onResize)
+
+    const so = (screen as Screen & { orientation?: ScreenOrientation })
+      .orientation
+    const onOrientationChange: EventListener = () => check()
+
+    if (so && typeof so.addEventListener === "function") {
+      so.addEventListener("change", onOrientationChange)
+    } else {
+      window.addEventListener("orientationchange", onOrientationChange)
+    }
+
+    const onVisibility = () => {
+      if (!document.hidden) check()
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+
+    return () => {
+      window.removeEventListener("resize", onResize)
+      if (so && typeof so.removeEventListener === "function") {
+        so.removeEventListener(
+          "change",
+          onOrientationChange as (ev: Event) => void,
+        )
+      }
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [])
+
+  /* 그리기 도구  */
   const handleAddText = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas || !roomId || !socketRef.current) return
-
     canvas.isDrawingMode = false
-
     const text = new IText("텍스트", {
       left: 100,
       top: 100,
       fontSize: 20,
       fill: selectedColor,
       editable: true,
-    }) as IText & { id?: string }
-
+    }) as WithId<IText>
     text.id = uuidv4()
-
     canvas.add(text)
     canvas.setActiveObject(text)
     canvas.renderAll()
     setActiveTool("text")
-
-    const payload = {
-      ...text.toObject(),
-      id: text.id,
+    const msg: WsAddObjectMsg = {
+      type: "add-object",
+      roomId,
+      payload: { ...text.toObject(), id: text.id },
     }
-
-    socketRef.current.send(
-      JSON.stringify({
-        type: "add-object",
-        roomId,
-        payload,
-      }),
-    )
+    socketRef.current.send(JSON.stringify(msg))
   }
+
   const handleDraw = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
-
     canvas.isDrawingMode = false
     const brush = new PencilBrush(canvas)
+    const desiredWidth = 2
+    const z = canvas.getZoom() || 1
+    brush.width = desiredWidth / z
     brush.color = selectedColor
-    brush.width = 2
     canvas.freeDrawingBrush = brush
     canvas.isDrawingMode = true
     setActiveTool("draw")
@@ -378,7 +380,6 @@ const CanvasRoomPage = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
     canvas.isDrawingMode = false
-
     const rect = new Rect({
       left: 100,
       top: 100,
@@ -386,69 +387,48 @@ const CanvasRoomPage = () => {
       height: 70,
       fill: "lightblue",
       selectable: true,
-    }) as Rect & { id?: string }
-
+    }) as WithId<Rect>
     rect.id = uuidv4()
-
     canvas.add(rect)
     canvas.setActiveObject(rect)
     canvas.renderAll()
     setActiveTool("rect")
-
-    const payload = {
-      ...rect.toObject(),
-      id: rect.id,
+    const msg: WsAddObjectMsg = {
+      type: "add-object",
+      roomId,
+      payload: { ...rect.toObject(), id: rect.id },
     }
-
-    socketRef.current?.send(
-      JSON.stringify({
-        type: "add-object",
-        roomId,
-        payload,
-      }),
-    )
+    socketRef.current?.send(JSON.stringify(msg))
   }
 
   const handleAddCircle = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
     canvas.isDrawingMode = false
-
     const circle = new Circle({
       left: 150,
       top: 150,
       radius: 40,
       fill: "lightgreen",
       selectable: true,
-    }) as Circle & { id?: string }
-
+    }) as WithId<Circle>
     circle.id = uuidv4()
-
     canvas.add(circle)
     canvas.setActiveObject(circle)
     canvas.renderAll()
     setActiveTool("circle")
-
-    const payload = {
-      ...circle.toObject(),
-      id: circle.id,
+    const msg: WsAddObjectMsg = {
+      type: "add-object",
+      roomId,
+      payload: { ...circle.toObject(), id: circle.id },
     }
-
-    socketRef.current?.send(
-      JSON.stringify({
-        type: "add-object",
-        roomId,
-        payload,
-      }),
-    )
+    socketRef.current?.send(JSON.stringify(msg))
   }
 
   const handleAddTriangle = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas || !roomId || !socketRef.current) return
-
     canvas.isDrawingMode = false
-
     const triangle = new Triangle({
       left: 200,
       top: 200,
@@ -456,34 +436,24 @@ const CanvasRoomPage = () => {
       height: 80,
       fill: "pink",
       selectable: true,
-    }) as Triangle & { id?: string }
-
+    }) as WithId<Triangle>
     triangle.id = uuidv4()
-
     canvas.add(triangle)
     canvas.setActiveObject(triangle)
     canvas.renderAll()
     setActiveTool("triangle")
-
-    const payload = {
-      ...triangle.toObject(),
-      id: triangle.id,
+    const msg: WsAddObjectMsg = {
+      type: "add-object",
+      roomId,
+      payload: { ...triangle.toObject(), id: triangle.id },
     }
-
-    socketRef.current.send(
-      JSON.stringify({
-        type: "add-object",
-        roomId,
-        payload,
-      }),
-    )
+    socketRef.current.send(JSON.stringify(msg))
   }
 
   const handleAddDiamond = () => {
     const canvas = fabricCanvasRef.current
     if (!canvas) return
     canvas.isDrawingMode = false
-
     const diamond = new Polygon(
       [
         { x: 0, y: -50 },
@@ -499,50 +469,41 @@ const CanvasRoomPage = () => {
         originX: "center",
         originY: "center",
       },
-    ) as Polygon & { id?: string }
-
+    ) as WithId<Polygon>
     diamond.id = uuidv4()
-
     canvas.add(diamond)
     canvas.setActiveObject(diamond)
     canvas.renderAll()
     setActiveTool("diamond")
-
-    const payload = {
-      ...diamond.toObject(),
-      id: diamond.id,
+    const msg: WsAddObjectMsg = {
+      type: "add-object",
+      roomId,
+      payload: { ...diamond.toObject(), id: diamond.id },
     }
-
-    socketRef.current?.send(
-      JSON.stringify({
-        type: "add-object",
-        roomId,
-        payload,
-      }),
-    )
+    socketRef.current?.send(JSON.stringify(msg))
   }
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value
     setSelectedColor(newColor)
-
     const canvas = fabricCanvasRef.current
     if (!canvas) return
-
     const activeObject = canvas.getActiveObject()
-    if (activeObject && "set" in activeObject) {
+    if (activeObject) {
       activeObject.set("fill", newColor)
       canvas.renderAll()
-
-      socketRef.current?.send(
-        JSON.stringify({
+      if (hasId(activeObject) && activeObject.id) {
+        const msg: WsUpdateObjectMsg = {
           type: "update-object",
           roomId,
-          payload: { ...activeObject.toObject(), id: activeObject.id },
-        }),
-      )
+          payload: {
+            id: activeObject.id,
+            ...(activeObject.toObject() as Record<string, unknown>),
+          },
+        }
+        socketRef.current?.send(JSON.stringify(msg))
+      }
     }
-
     if (canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush.color = newColor
     }
@@ -554,8 +515,10 @@ const CanvasRoomPage = () => {
     if (!canvas || !file || !roomId || !socketRef.current) return
 
     const reader = new FileReader()
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result
+      if (typeof dataUrl !== "string") return
+
       const img = new Image()
       img.onload = () => {
         const fabricImg = new FabricImage(img, {
@@ -564,34 +527,21 @@ const CanvasRoomPage = () => {
           scaleX: 0.3,
           scaleY: 0.3,
           selectable: true,
-        }) as FabricImage & { id?: string }
-
+        }) as WithId<FabricImage>
         fabricImg.id = uuidv4()
-
         canvas.add(fabricImg)
         canvas.setActiveObject(fabricImg)
         canvas.renderAll()
         setActiveTool("image")
-
-        const payload = {
-          ...fabricImg.toObject(),
-          id: fabricImg.id,
-          src: img.src,
+        const msg: WsAddObjectMsg = {
+          type: "add-object",
+          roomId,
+          payload: { ...fabricImg.toObject(), id: fabricImg.id, src: img.src },
         }
-
-        if (socketRef.current) {
-          socketRef.current.send(
-            JSON.stringify({
-              type: "add-object",
-              roomId,
-              payload,
-            }),
-          )
-        }
+        socketRef.current!.send(JSON.stringify(msg))
       }
       img.src = dataUrl
     }
-
     reader.readAsDataURL(file)
     e.target.value = ""
   }
@@ -599,25 +549,26 @@ const CanvasRoomPage = () => {
   function getDisplayName(): string {
     const user = auth.currentUser
     if (user?.displayName) return user.displayName
-
-    const storedName = sessionStorage.getItem("guestName")
-    if (storedName) return storedName
-
-    const randomNum = Math.floor(Math.random() * 1000)
-    const name = `유저 ${randomNum}`
+    const stored = sessionStorage.getItem("guestName")
+    if (stored) return stored
+    const name = `유저 ${Math.floor(Math.random() * 1000)}`
     sessionStorage.setItem("guestName", name)
     return name
   }
 
-  const toggleToolbar = () => {
-    setToolbarOpen((prev) => !prev)
+  const toggleToolbar = () => setToolbarOpen((prev) => !prev)
+
+  if (!roomId) {
+    return null
   }
 
   return (
     <Wrapper>
+      <GlobalStyle />
       <CanvasWrapper id="canvas-wrapper">
-        <Canvas id="canvas" ref={canvasRef} />
+        <CanvasEl id="canvas" ref={canvasRef} />
       </CanvasWrapper>
+
       <Toolbar $mobileVisible={toolbarOpen}>
         <Section>
           <Title>그리기</Title>
@@ -643,7 +594,7 @@ const CanvasRoomPage = () => {
           </ToolRow>
         </Section>
         <Section>
-          <Title> 도형 </Title>
+          <Title>도형</Title>
           <ToolRow>
             <Button
               onClick={handleAddRect}
@@ -700,12 +651,13 @@ const CanvasRoomPage = () => {
         <Section>
           <Title>참여 유저</Title>
           <JoinUser>
-            {userList.map((name, idx) => (
-              <JoinUserList key={idx}>{name}</JoinUserList>
+            {userList.map((name) => (
+              <JoinUserList key={name}>{name}</JoinUserList>
             ))}
           </JoinUser>
         </Section>
       </Toolbar>
+
       <BackDiv>
         <BackButton />
       </BackDiv>
@@ -717,156 +669,3 @@ const CanvasRoomPage = () => {
 }
 
 export default CanvasRoomPage
-
-const Wrapper = styled.div`
-  display: flex;
-  height: 100vh;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-`
-
-const CanvasWrapper = styled.div`
-  flex: 1;
-  background: #fff;
-  position: relative;
-`
-const ToolbarToggleButton = styled.button`
-  display: none;
-
-  @media (max-width: 768px) {
-    display: block;
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    padding: 8px 16px;
-    background-color: #594100;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    z-index: 20;
-    font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-`
-
-const Toolbar = styled.div<{ $mobileVisible?: boolean }>`
-  width: 180px;
-  border-left: 1px solid #000;
-  padding: 2rem;
-  background-color: #f9f9f9;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-
-  @media (max-width: 768px) {
-    width: 100%;
-    height: auto;
-    border-left: none;
-    border-top: 1px solid #ccc;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    padding: 1rem;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    background: #f9f9f9;
-    z-index: 10;
-
-    transform: translateY(
-      ${({ $mobileVisible }) => ($mobileVisible ? "0" : "100%")}
-    );
-    opacity: ${({ $mobileVisible }) => ($mobileVisible ? 1 : 0)};
-    pointer-events: ${({ $mobileVisible }) =>
-      $mobileVisible ? "auto" : "none"};
-    transition: transform 0.4s ease, opacity 0.4s ease;
-  }
-`
-
-const Section = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: center;
-  width: 100%;
-  max-width: 160px;
-  box-sizing: border-box;
-`
-
-const ToolRow = styled.div`
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  justify-content: center;
-
-  @media (max-width: 768px) {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-    width: 100%;
-  }
-`
-
-const Canvas = styled.canvas`
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-`
-
-const Button = styled.button`
-  padding: 6px 12px;
-  border: 1px solid #ccc;
-  background-color: white;
-  border-radius: 4px;
-  cursor: pointer;
-  &.active {
-    background-color: #d0e8ff;
-    border-color: #3399ff;
-  }
-`
-
-const Title = styled.div`
-  font-weight: bold;
-  margin-bottom: 4px;
-`
-
-const BackDiv = styled.div`
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  transform: translateX(-50%);
-  z-index: 20;
-`
-
-const ColorPicker = styled.input`
-  appearance: none;
-  -webkit-appearance: none;
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 50%;
-  padding: 0;
-  background: none;
-  cursor: pointer;
-  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
-
-  &::-webkit-color-swatch-wrapper {
-    padding: 0;
-    border-radius: 50%;
-  }
-
-  &::-webkit-color-swatch {
-    border: none;
-    border-radius: 50%;
-  }
-`
-
-const JoinUser = styled.div``
-const JoinUserList = styled.li`
-  list-style-type: none;
-`

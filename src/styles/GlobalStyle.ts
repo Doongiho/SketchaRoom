@@ -11,6 +11,10 @@ export const GlobalStyle = createGlobalStyle`
     margin: 0;
     font-family: 'Pretendard', sans-serif;
     background-color: #f9fafb;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;         
+    overscroll-behavior: none;   
   }
 
   a {
